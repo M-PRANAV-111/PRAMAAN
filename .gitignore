@@ -1,0 +1,16 @@
+# Runtime data — databases, uploaded files, keys, credentials, reports
+backend/var/
+*.sqlite3
+*.sqlite3-*
+.env
+# Build output and dependencies
+front/dist/
+front/node_modules
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

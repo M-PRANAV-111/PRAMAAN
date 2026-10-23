@@ -1,0 +1,21 @@
+# Local integration stack. TLS is terminated in front of this (see docs/DEPLOYMENT.md).
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - pramaan-data:/data
+    restart: unless-stopped
+  front:
+    build:
+      context: .
+      dockerfile: front/Dockerfile
+    depends_on:
+      - backend
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+volumes:
+  pramaan-data:

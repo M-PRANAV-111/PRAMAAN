@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+/* PRAMAAN design tokens.
+   Palette from Indian government file work: pale green noting-sheet paper, blue-black ink, red tape
+   (reserved for deficiencies, the proof-chain ribbon and the full stop in the wordmark), turmeric for
+   items awaiting review. Layout language borrows from format.obys.agency: a full-bleed block-letter
+   wordmark, a thin label strip, and content laid out as differently shaped sheets on an ink canvas. */
+@theme {
+  --color-paper: #f2f5f0;
+  --color-paper-deep: #e4eae2;
+  --color-sheet: #ffffff;
+  --color-ink: #1d2b4f;
+  --color-ink-deep: #16213d;
+  --color-ink-soft: #4a5876;
+  --color-ink-faint: #7c879c;
+  --color-rule: #cbd5cb;
+  --color-rule-strong: #a9b8aa;
+  --color-tape: #b4232c;
+  --color-tape-wash: #fbeceb;
+  --color-turmeric: #9a6410;
+  --color-turmeric-wash: #fbf1dd;
+  --color-leaf: #2e6b4e;
+  --color-leaf-wash: #e5f1ea;
+  --color-dusk: #5b4e9a;
+  --color-dusk-wash: #eeebf8;
+  --color-focus: #2f6fdb;
+
+  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Inter Display", "Inter", system-ui, sans-serif;
+  --font-serif: "Lora", "Charter", Cambria, Georgia, serif;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9688rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 3rem;
+  --text-4xl: 4.5rem;
+  --text-5xl: 6.5rem;
+
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+
+  --animate-rise: rise 220ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade: fade 160ms ease-out both;
+  --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
+
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+}
+
+@font-face { font-family: "Inter"; src: url("/assets/fonts/Inter-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("/assets/fonts/Inter-Medium.woff") format("woff"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Inter"; src: url("/assets/fonts/Inter-SemiBold.woff") format("woff"); font-weight: 600 700; font-display: swap; }
+@font-face { font-family: "Inter Display"; src: url("/assets/fonts/InterDisplay-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Inter Display"; src: url("/assets/fonts/InterDisplay-Medium.woff") format("woff"); font-weight: 500 700; font-display: swap; }
+@font-face { font-family: "Lora"; src: url("/assets/fonts/Lora-Variable.woff") format("woff"); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: "Lora"; src: url("/assets/fonts/Lora-Italic-Variable.woff") format("woff"); font-weight: 400 700; font-style: italic; font-display: swap; }
+
+@layer base {
+  html { background: var(--color-paper); color: var(--color-ink); -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font-sans); font-size: var(--text-base); line-height: 1.5;
+    font-feature-settings: "kern", "calt", "cv11"; -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.035em; line-height: 1; text-wrap: balance; }
+  h4 { font-weight: 600; }
+  p { text-wrap: pretty; }
+  ::selection { background: #f4d9d6; }
+  :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  table { font-variant-numeric: tabular-nums; }
+  button, a { -webkit-tap-highlight-color: transparent; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0ms !important;
+      transition-duration: 1ms !important; scroll-behavior: auto !important; }
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    min-height: 2.5rem; padding: 0 1rem; border-radius: var(--radius-sm);
+    font-weight: 500; font-size: var(--text-sm); line-height: 1; white-space: nowrap; letter-spacing: -0.005em;
+    transition: background-color 90ms, color 90ms, box-shadow 90ms;
+  }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary { background: var(--color-ink); color: var(--color-paper); }
+  .btn-primary:hover:not(:disabled) { background: var(--color-ink-deep); }
+  .btn-quiet { background: transparent; color: var(--color-ink); box-shadow: inset 0 0 0 1px var(--color-ink); }
+  .btn-quiet:hover:not(:disabled) { background: var(--color-ink); color: var(--color-paper); }
+  .btn-paper { background: var(--color-paper); color: var(--color-ink); }
+  .btn-paper:hover:not(:disabled) { background: var(--color-sheet); }
+  .btn-tape { background: var(--color-tape); color: #fff; }
+
+  .field { display: grid; gap: 0.35rem; font-size: var(--text-sm); }
+  .field > span { font-weight: 500; color: var(--color-ink-soft); }
+  .input {
+    min-height: 2.5rem; padding: 0 0.75rem; border-radius: var(--radius-sm); background: var(--color-sheet);
+    box-shadow: inset 0 0 0 1px var(--color-rule-strong); color: var(--color-ink); font-size: var(--text-base);
+  }
+  textarea.input { padding: 0.6rem 0.75rem; min-height: 6rem; line-height: 1.45; }
+  .input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--color-ink); }
+
+  /* Sheets: white paper on the canvas. `.cut` chamfers the top-right corner like a file sheet. */
+  .sheet { background: var(--color-sheet); border-radius: var(--radius-sm); box-shadow: 0 0 0 1px rgb(29 43 79 / 0.08); }
+  .cut { clip-path: polygon(0 0, calc(100% - var(--cut, 22px)) 0, 100% var(--cut, 22px), 100% 100%, 0 100%); }
+  .cut-bl { clip-path: polygon(0 0, 100% 0, 100% 100%, var(--cut, 22px) 100%, 0 calc(100% - var(--cut, 22px))); }
+
+  /* The label strip under a wordmark: small text spread across a thin paper band. */
+  .strip { background: var(--color-paper); color: var(--color-ink); font-size: var(--text-xs); line-height: 1.25; }
+  .strip a, .strip button { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  .strip a:hover, .strip button:hover { text-decoration-color: var(--color-tape); }
+
+  .label { font-size: var(--text-xs); color: var(--color-ink-soft); }
+  .noting { background-image: repeating-linear-gradient(transparent 0 27px, rgb(169 184 170 / 0.35) 27px 28px); }
+  .link { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-decoration-color: var(--color-rule-strong); text-underline-offset: 3px; }
+  .link:hover { text-decoration-color: currentColor; }
+
+  /* Block wordmark pieces rise from the baseline once, on first load. */
+  .wm-piece { transform-box: fill-box; animation: wm-rise 720ms cubic-bezier(0.2, 0.8, 0.15, 1) both; }
+  @keyframes wm-rise { from { transform: translateY(105%); } to { transform: none; } }
+
+  /* Scroll-linked effects use CSS scroll timelines where supported; elsewhere the end state shows. */
+  @supports (animation-timeline: view()) {
+    .scroll-dial { animation: dial-turn linear both; animation-timeline: view(); animation-range: entry 10% exit 90%; }
+    @keyframes dial-turn { from { transform: rotate(-150deg); } to { transform: rotate(150deg); } }
+    .scroll-reveal { animation: sheet-in linear both; animation-timeline: view(); animation-range: entry 0% entry 25%; }
+    @keyframes sheet-in { from { opacity: 0.35; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+  }
+}
+
+/* Page changes cross-fade quickly; the header stays put. */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; }
+::view-transition-group(app-header) { animation: none; }
+
+@layer utilities {
+  .tabular { font-variant-numeric: tabular-nums; }
+  .cv { content-visibility: auto; contain-intrinsic-size: auto 72px; }
+}
+
+
+/* ───────────────────────── Document journey (landing page) ─────────────────────────
+   One sticky stage behind the scene copy. Parts are centred on the stage with `translate`
+   and moved only through `transform` / `opacity` written by src/lib/scrollStory.ts. */
+@layer components {
+  .journey { position: relative; --header-h: 3.5rem; --doc-w: clamp(240px, min(32vw, 52svh), 500px); }
+  .journey-stage { position: sticky; top: var(--header-h); height: calc(100svh - var(--header-h)); overflow: hidden; pointer-events: none; perspective: 1600px; z-index: 0; }
+  .journey-scenes { position: relative; z-index: 1; margin-top: calc(var(--header-h) - 100svh); width: min(100%, 1400px); margin-inline: auto; padding-inline: 1.5rem; }
+
+  .journey-part { position: absolute; left: 50%; top: 50%; translate: -50% -50%; visibility: hidden; opacity: 0; will-change: transform, opacity; transform-style: preserve-3d; }
+  .journey-doc { width: var(--doc-w); aspect-ratio: 210 / 297; }
+  .journey-float {
+    position: relative; width: 100%; height: 100%; transform-style: preserve-3d;
+    transform: translate3d(calc(var(--px, 0) * var(--hover, 0) * 7px), calc(var(--py, 0) * var(--hover, 0) * 6px), 0)
+      rotateY(calc(var(--px, 0) * var(--hover, 0) * 6deg)) rotateX(calc(var(--py, 0) * var(--hover, 0) * -5deg));
+    animation: journey-bob 6s ease-in-out infinite;
+  }
+  .journey-float[data-pointing] { transition: transform 420ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+  @keyframes journey-bob { 50% { translate: 0 calc(var(--hover, 0) * -7px); } }
+  .journey-paper { position: absolute; inset: 0; background: #fff;
+    box-shadow: 0 0 0 1px rgb(29 43 79 / 0.1), 0 6px 14px -4px rgb(29 43 79 / 0.14), 0 26px 50px -24px rgb(29 43 79 / 0.42); }
+  .story-doc { font-family: Helvetica, Arial, sans-serif; }
+  .story-doc-mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+  .journey-layer { position: absolute; inset: 0; visibility: hidden; opacity: 0; box-shadow: 0 0 0 1px rgb(91 78 154 / 0.4), 0 24px 48px -24px rgb(91 78 154 / 0.5); }
+  .journey-ribbon { position: absolute; left: -12px; top: 5%; bottom: 5%; width: 4px; background: var(--color-tape); transform: scaleY(0); transform-origin: top; }
+  .journey-progress { position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--color-ink); transform: scaleX(0); transform-origin: left; }
+  .journey-numeral { position: absolute; right: 2.5vw; bottom: 1svh; font-family: var(--font-display); font-weight: 500; font-size: min(26svh, 18vw);
+    line-height: 0.8; letter-spacing: -0.06em; color: rgb(29 43 79 / 0.06); }
+
+  .journey-ghost { box-shadow: 0 0 0 1px rgb(29 43 79 / 0.1), 0 14px 30px -18px rgb(29 43 79 / 0.4);
+    background: linear-gradient(#1d2b4f, #1d2b4f) 9% 14% / 58% 3.2% no-repeat,
+      repeating-linear-gradient(#e3e6ea 0 2px, transparent 2px 13px) 9% 30% / 82% 40% no-repeat, #fff; }
+  .journey-ghost-tag { position: absolute; right: 8%; top: 5%; padding: 3px 7px; font-size: 11px; font-weight: 600;
+    background: var(--color-turmeric-wash); color: var(--color-turmeric); }
+
+  .journey-upload { width: calc(var(--doc-w) * 0.5 + 10rem); height: calc(var(--doc-w) * 0.7071 + 10rem); background: var(--color-sheet);
+    box-shadow: 0 0 0 1px var(--color-ink-faint), 0 24px 48px -28px rgb(29 43 79 / 0.4); font-size: 14px; }
+  .journey-upload-head, .journey-upload-foot { position: absolute; inset-inline: 0; height: 4.5rem; padding: 0.75rem 1rem; }
+  .journey-upload-head { top: 0; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--color-rule); }
+  .journey-upload-head span { color: var(--color-ink-soft); font-size: 12px; }
+  .journey-upload-foot { bottom: 0; display: grid; align-content: center; gap: 4px; border-top: 1px solid var(--color-rule); }
+  .journey-upload-file { font-weight: 600; }
+  .journey-upload-stage { color: var(--color-dusk); font-size: 12px; }
+  .journey-upload-track { height: 4px; background: var(--color-rule); }
+  .journey-upload-bar { display: block; height: 100%; background: var(--color-ink); transform: scaleX(0); transform-origin: left; }
+
+  .journey-sender { width: calc(var(--doc-w) * 0.48 + 4rem); height: calc(var(--doc-w) * 0.6788 + 6rem); display: flex; flex-direction: column;
+    justify-content: flex-end; gap: 2px; padding: 0.6rem 0.75rem; font-size: 12px; line-height: 1.25;
+    background: var(--color-paper-deep); box-shadow: inset 0 0 0 1px var(--color-rule-strong); }
+  .journey-sender span { color: var(--color-ink-soft); }
+
+  .journey-slot { width: calc(var(--doc-w) * 0.8); height: var(--doc-w); display: flex; flex-direction: column; gap: 6px;
+    padding: 1.4rem 1rem; background: var(--color-ink); color: var(--color-paper); font-size: 12px; line-height: 1.3; }
+  .journey-slot strong { font-family: var(--font-display); font-size: 1.1rem; font-weight: 500; letter-spacing: -0.02em; }
+  .journey-slot span:last-child { color: rgb(242 245 240 / 0.75); }
+  .journey-slot-mouth { position: absolute; left: 8%; right: 8%; top: -4px; height: 8px; background: var(--color-ink-deep); }
+
+  .journey-nodes { position: absolute; inset: 0; visibility: hidden; opacity: 0; }
+  .journey-line { fill: none; stroke: var(--color-ink); stroke-width: 1.25px; vector-effect: non-scaling-stroke; }
+  .journey-node { position: absolute; transform: translate(0, -50%); opacity: 0; display: grid; gap: 2px; width: max-content; max-width: min(18.5vw, calc(22vw - 26px));
+    padding: 0.6rem 0.8rem; font-size: 13px; line-height: 1.3; background: var(--color-sheet);
+    box-shadow: 0 0 0 1px var(--color-rule-strong); border-left: 3px solid var(--color-ink-faint); }
+  .journey-node strong { font-weight: 600; }
+  .journey-node span { color: var(--color-ink-soft); }
+  .journey-node-turmeric { border-left-color: var(--color-turmeric); }
+  .journey-node-dusk { border-left-color: var(--color-dusk); }
+
+  .journey-proof { width: min(25vw, 24rem); display: grid; gap: 11px; padding: 1.1rem 1.2rem; font-size: 13.5px; line-height: 1.35;
+    background: var(--color-sheet); box-shadow: 0 0 0 1px rgb(29 43 79 / 0.1), 0 24px 48px -28px rgb(29 43 79 / 0.45); }
+  .journey-proof-pill { justify-self: start; padding: 2px 8px; font-size: 11px; font-weight: 600; background: var(--color-tape-wash); color: var(--color-tape); }
+  .journey-proof-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 500; line-height: 1.15; letter-spacing: -0.02em; }
+  .journey-proof ol { display: grid; gap: 7px; padding-left: 12px; border-left: 3px solid var(--color-tape); }
+  .journey-proof li { color: var(--color-ink-soft); }
+  .journey-proof li b { display: block; font-weight: 600; color: var(--color-ink); }
+
+  .journey-scene { position: relative; scroll-margin-top: 36svh; }
+  .journey-scene-open { min-height: calc(100svh - 3.5rem); display: flex; align-items: center; }
+  .journey-scene-std { min-height: 85svh; }
+  .journey-scene-tall { min-height: 120svh; }
+  .journey-open { width: min(46vw, 40rem); padding: 2.5rem 0 4rem; }
+  .journey-copy { position: sticky; top: 13svh; width: min(34vw, 32rem); padding-bottom: 2rem; }
+  .journey-mark { position: relative; padding-left: 1.1rem; color: var(--color-ink-soft); transition: color 320ms ease-out; }
+  .journey-mark::before { content: ""; position: absolute; left: 0; top: 0.45em; width: 0.5rem; height: 0.5rem;
+    box-shadow: inset 0 0 0 1px var(--color-ink-faint); transition: background-color 320ms ease-out, box-shadow 320ms ease-out, transform 320ms ease-out; }
+  .journey-mark[data-reached], .journey-static .journey-mark { color: var(--color-ink); }
+  .journey-mark[data-reached]::before, .journey-static .journey-mark::before { background: var(--color-ink); box-shadow: none; transform: scale(1.15); }
+  .journey-mark[data-tone="tape"][data-reached]::before, .journey-static .journey-mark[data-tone="tape"]::before { background: var(--color-tape); }
+
+  .journey-static .journey-scenes { margin-top: 0; }
+  .journey-static .journey-scene { min-height: 0; display: grid; gap: 2rem; padding: 3.5rem 0; align-items: start;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 20rem); border-top: 1px solid var(--color-rule); }
+  .journey-static .journey-copy, .journey-static .journey-open { position: static; width: auto; padding: 0; }
+  .journey-still { display: flex; gap: 0.75rem; }
+  .journey-still .journey-paper { position: relative; flex: 1; max-width: 18rem; aspect-ratio: 210 / 297; }
+
+  @media (max-width: 1023px) {
+    .journey { --doc-w: clamp(160px, min(50vw, 30svh), 260px); }
+    .journey-scenes { padding-inline: 1rem; }
+    .journey-scene-open { min-height: 0; display: block; padding-top: 44svh; }
+    .journey-scene-std { min-height: 0; padding: 44svh 0 6svh; }
+    .journey-scene-tall { min-height: 0; padding: 44svh 0 28svh; }
+    .journey-copy, .journey-open { position: relative; top: auto; width: auto; padding: 1.25rem 1rem 1.5rem;
+      background: var(--color-paper); box-shadow: 0 -1px 0 var(--color-ink); }
+    .journey-nodes, .journey-proof, .journey-numeral { display: none; }
+    .journey-static .journey-scene { grid-template-columns: 1fr; }
+    .journey-static .journey-copy, .journey-static .journey-open { background: none; box-shadow: none; }
+  }
+
+  html:has(dialog[open]) { overflow: hidden; }
+  .signin-dialog { margin: auto; padding: 0; border: 0; background: transparent; width: min(30rem, calc(100vw - 1.5rem));
+    max-height: calc(100svh - 1.5rem); overflow: auto; overscroll-behavior: contain; }
+  .signin-dialog::backdrop { background: rgb(29 43 79 / 0.5); }
+
+  @media (forced-colors: active) {
+    .sheet, .journey-paper, .journey-ghost, .journey-upload, .journey-sender, .journey-slot,
+    .journey-node, .journey-proof, .journey-proof-pill, .input, .btn, .signin-dialog {
+      border: 1px solid CanvasText;
+    }
+    .journey-layer { border: 1px dashed CanvasText; }
+    .journey-mark::before { border: 1px solid CanvasText; }
+    .journey-mark[data-reached]::before { background: Highlight; border-color: Highlight; forced-color-adjust: none; }
+    .journey-numeral { opacity: 0.08; }
+  }
+}
+

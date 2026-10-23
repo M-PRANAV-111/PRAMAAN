@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "typeRoots": ["./types-offline"],
+    "types": [],
+    "paths": {
+      "@contract": ["../contracts/api.gen.ts"],
+      "react": ["./types-offline/react/index.d.ts"],
+      "react/jsx-runtime": ["./types-offline/react/index.d.ts"],
+      "react-dom/client": ["./types-offline/react-dom/index.d.ts"]
+    }
+  },
+  "include": ["src", "../contracts/api.gen.ts", "types-offline"]
+}

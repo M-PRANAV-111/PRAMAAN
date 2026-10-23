@@ -1,0 +1,225 @@
+# PRAMAAN rule pack — AICTE Extension of Approval (prototype)
+#
+# Every rule cites its source. `status: TO_VERIFY` means the clause reference and any threshold are
+# placeholders that MUST be checked against the official Approval Process Handbook text and its
+# corrigenda before use on real applications. The UI shows this flag on every finding.
+
+pack: aicte-eoa
+version: "2026.1"
+title: AICTE Extension of Approval — preliminary validation (prototype)
+source:
+  document: AICTE Approval Process Handbook 2024-25 to 2026-27
+  url: https://aicte.gov.in/sites/default/files/APH%20Final.pdf
+  checked_on: "2026-10-21"
+
+reference_dates:
+  academic_year_start: "2026-07-01"        # ASSUMPTION — confirm against the APH academic calendar
+  previous_cycle_start: "2025-01-01"       # window in which the previous EoA letter was issued
+  previous_cycle_end: "2026-06-30"
+  previous_academic_year: "2025-26"
+
+categories:
+  EOA_EXISTING:
+    label: Extension of Approval — no change in intake
+  EOA_INTAKE_INCREASE:
+    label: Extension of Approval — with increase in intake
+
+checklist:
+  - doc_type: eoa_letter
+    required: true
+    note: Most recent EoA letter (previous academic year)
+  - doc_type: affidavit
+    required: true
+    note: Affidavit in the EoA format for the current academic year
+  - doc_type: fire_noc
+    required: true
+    note: Fire safety NOC from the competent authority
+  - doc_type: building_stability
+    required: true
+    note: Structural stability certificate
+  - doc_type: faculty_summary
+    required: true
+    note: Faculty and student strength summary
+  - doc_type: infra_photo
+    required: false
+    note: Photographs of laboratories and classrooms
+
+rules:
+  # ---------- Completeness ----------
+  - id: DOC.EOA_LETTER.PRESENT
+    title: Previous EoA letter submitted
+    type: require_document
+    doc_type: eoa_letter
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — documents for Extension of Approval", status: TO_VERIFY}
+    remedy: Upload the most recent AICTE Extension of Approval letter.
+    fix_doc_type: eoa_letter
+
+  - id: DOC.AFFIDAVIT.PRESENT
+    title: Affidavit submitted
+    type: require_document
+    doc_type: affidavit
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — affidavit format for EoA", status: TO_VERIFY}
+    remedy: Upload the notarised affidavit in the prescribed format for the current academic year.
+    fix_doc_type: affidavit
+
+  - id: DOC.FIRE_NOC.PRESENT
+    title: Fire safety NOC submitted
+    type: require_document
+    doc_type: fire_noc
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — infrastructure and safety documents", status: TO_VERIFY}
+    remedy: Upload the fire safety NOC issued by the competent fire authority.
+    fix_doc_type: fire_noc
+
+  - id: DOC.BUILDING.PRESENT
+    title: Structural stability certificate submitted
+    type: require_document
+    doc_type: building_stability
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — infrastructure and safety documents", status: TO_VERIFY}
+    remedy: Upload a structural stability certificate from a licensed structural engineer.
+    fix_doc_type: building_stability
+
+  - id: DOC.FACULTY.PRESENT
+    title: Faculty and student strength summary submitted
+    type: require_document
+    doc_type: faculty_summary
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — faculty requirements", status: TO_VERIFY}
+    remedy: Upload the faculty and student strength summary for the current academic year.
+    fix_doc_type: faculty_summary
+
+  # ---------- Identity and period ----------
+  - id: ID.CONSISTENT
+    title: Permanent ID is the same on every document and in AICTE records
+    type: consistency
+    field: permanent_id
+    sources: [eoa_letter, affidavit, fire_noc, building_stability, faculty_summary, "record:permanent_id"]
+    severity: REVIEW
+    clause: {ref: "AICTE Permanent ID identifies the institution on all approval records", status: TO_VERIFY}
+    remedy: Re-issue or correct the document that carries a different Permanent ID, or explain the difference.
+    fix_doc_type: null
+
+  - id: AY.AFFIDAVIT
+    title: Affidavit is for the academic year being applied for
+    type: assert
+    inputs: {ay: affidavit.academic_year, app_ay: application.academic_year}
+    expr: "ay == app_ay"
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — affidavit for the relevant academic year", status: TO_VERIFY}
+    remedy: Upload an affidavit dated for the academic year of this application.
+    fix_doc_type: affidavit
+
+  - id: EOA.PREVIOUS_CYCLE
+    title: EoA letter is from the previous approval cycle (uses issue date, not print date)
+    type: assert
+    inputs: {ay: eoa_letter.academic_year, issued: eoa_letter.issue_date, prev_ay: ref.previous_academic_year,
+             start: ref.previous_cycle_start, end: ref.previous_cycle_end}
+    expr: "ay == prev_ay and start <= issued <= end"
+    severity: REVIEW
+    clause: {ref: "Continuity of approval — previous year's EoA", status: TO_VERIFY}
+    remedy: Upload the EoA letter issued for the previous academic year. Reprints are acceptable.
+    fix_doc_type: eoa_letter
+
+  # ---------- Intake ----------
+  - id: INTAKE.LETTER_VS_RECORD
+    title: Intake on the EoA letter matches AICTE records
+    type: consistency
+    field: total_intake
+    sources: [eoa_letter, "record:approved_intake"]
+    severity: REVIEW
+    clause:
+      ref: "AICTE EoA letter 2026-27, Important instructions — council records take precedence over the letter"
+      url: https://soe.cusat.ac.in/assets/files/aicte_eoa_letters/EOA_Report_2026-2027.pdf
+      status: SOURCE_SEEN
+    remedy: Clarify the difference between the letter and AICTE records; AICTE records prevail.
+    fix_doc_type: eoa_letter
+    action_owner: OFFICER
+
+  - id: INTAKE.NO_CHANGE
+    title: Intake sought equals approved intake (no-change category)
+    type: assert
+    applies_to: [EOA_EXISTING]
+    inputs: {sought: affidavit.total_intake, approved: record.approved_intake}
+    expr: "sought == approved"
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — EoA without change", status: TO_VERIFY}
+    remedy: Either correct the intake in the affidavit or apply under the intake-increase category.
+    fix_doc_type: affidavit
+
+  - id: INTAKE.CONSISTENT
+    title: Intake is the same in the affidavit and the faculty summary
+    type: consistency
+    field: total_intake
+    sources: [affidavit, faculty_summary]
+    tiebreak: "record:approved_intake"   # AICTE records prevail when deciding which document to correct
+    severity: REVIEW
+    clause: {ref: "Internal consistency of declarations", status: TO_VERIFY}
+    remedy: Correct the document with the wrong intake and re-upload it.
+    fix_doc_type: null   # decided per finding: the source that disagrees with the majority or AICTE records
+
+  # ---------- Faculty ----------
+  - id: FACULTY.CONSISTENT
+    title: Faculty count is the same in the affidavit and the faculty summary
+    type: consistency
+    field: faculty_count
+    sources: [affidavit, faculty_summary]
+    severity: REVIEW
+    clause: {ref: "Internal consistency of declarations", status: TO_VERIFY}
+    remedy: Correct the document with the wrong faculty count and re-upload it.
+    fix_doc_type: null   # decided per finding
+
+  - id: FACULTY.RATIO
+    title: Student-to-faculty ratio within the prescribed limit
+    type: assert
+    inputs: {students: faculty_summary.student_strength, faculty: faculty_summary.faculty_count}
+    params: {max_ratio: 20}
+    expr: "faculty > 0 and students / faculty <= max_ratio"
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — faculty-student ratio (threshold is a placeholder)", status: TO_VERIFY}
+    remedy: Recruit faculty to meet the prescribed ratio, or correct the declared figures.
+    fix_doc_type: faculty_summary
+
+  # ---------- Validity ----------
+  - id: FIRE.VALID
+    title: Fire safety NOC valid at the start of the academic year
+    type: expiry
+    field: fire_noc.valid_to
+    on_or_after: ref.academic_year_start
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — infrastructure and safety documents", status: TO_VERIFY}
+    remedy: Upload a renewed fire safety NOC valid beyond the start of the academic year.
+    fix_doc_type: fire_noc
+
+  - id: BUILDING.VALID
+    title: Structural stability certificate valid at the start of the academic year
+    type: expiry
+    field: building_stability.valid_to
+    on_or_after: ref.academic_year_start
+    severity: DEFICIENCY
+    clause: {ref: "APH 2024-27 — infrastructure and safety documents", status: TO_VERIFY}
+    remedy: Upload a current structural stability certificate.
+    fix_doc_type: building_stability
+
+  # ---------- Source verification ----------
+  - id: VERIFY.FIRE_NOC
+    title: Fire safety NOC confirmed with its issuer
+    type: verification
+    doc_type: fire_noc
+    severity: REVIEW
+    clause: {ref: "PS SIH26261 — verification with issuing authorities", status: TO_VERIFY}
+    remedy: Confirm the certificate with the issuing fire authority.
+    fix_doc_type: fire_noc
+    action_owner: OFFICER
+
+  - id: VERIFY.BUILDING
+    title: Structural stability certificate confirmed with its issuer
+    type: verification
+    doc_type: building_stability
+    severity: REVIEW
+    clause: {ref: "PS SIH26261 — verification with issuing authorities", status: TO_VERIFY}
+    remedy: Confirm the certificate with the issuing engineer or registry.
+    fix_doc_type: building_stability
+    action_owner: OFFICER

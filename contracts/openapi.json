@@ -1,0 +1,3403 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PRAMAAN API",
+    "version": "1.0.0",
+    "description": "Decision-support API for AICTE application validation (SIH26261). All findings are advisory; the API cannot approve, reject or declare a document forged."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/v1/applications": {
+      "get": {
+        "operationId": "listApplications",
+        "summary": "List applications visible to the caller",
+        "tags": [
+          "applications"
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filter by derived status",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationSummary"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      },
+      "post": {
+        "operationId": "createApplication",
+        "summary": "Create a draft application",
+        "tags": [
+          "applications"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "INSTITUTION"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}": {
+      "get": {
+        "operationId": "getApplication",
+        "summary": "Application workspace: checklist, documents, latest run",
+        "tags": [
+          "applications"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationDetail"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/submit": {
+      "post": {
+        "operationId": "submitApplication",
+        "summary": "Submit the application to AICTE for scrutiny",
+        "tags": [
+          "applications"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationSummary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "INSTITUTION"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/validate": {
+      "post": {
+        "operationId": "validateApplication",
+        "summary": "Queue a full validation run",
+        "tags": [
+          "applications"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "INSTITUTION",
+          "OFFICER",
+          "ADMIN"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/runs": {
+      "get": {
+        "operationId": "listRuns",
+        "summary": "Validation run history",
+        "tags": [
+          "applications"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RunOut"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/findings": {
+      "get": {
+        "operationId": "listFindings",
+        "summary": "Findings with proof and evidence",
+        "tags": [
+          "findings"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_resolved",
+            "in": "query",
+            "required": false,
+            "description": "true to include resolved findings",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FindingOut"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/repair-plan": {
+      "get": {
+        "operationId": "repairPlan",
+        "summary": "Grouped, ordered next steps",
+        "tags": [
+          "findings"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepairPlanOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/verifications": {
+      "get": {
+        "operationId": "listVerifications",
+        "summary": "Verification ladder attempts",
+        "tags": [
+          "evidence"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VerificationOut"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Sign in and receive a session cookie",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "End the session",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "me",
+        "summary": "Current user",
+        "tags": [
+          "auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/documents": {
+      "post": {
+        "operationId": "uploadDocument",
+        "summary": "Upload a document (multipart: file, doc_type). Replaces the current document of the same type.",
+        "tags": [
+          "documents"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "doc_type"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "doc_type": {
+                    "$ref": "#/components/schemas/DocumentOut/properties/doc_type"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "INSTITUTION"
+        ]
+      }
+    },
+    "/api/v1/jobs/{job_id}": {
+      "get": {
+        "operationId": "getJob",
+        "summary": "Processing job status",
+        "tags": [
+          "documents"
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/evidence": {
+      "get": {
+        "operationId": "documentEvidence",
+        "summary": "Extracted claims with positions, verification attempts and integrity indicators",
+        "tags": [
+          "evidence"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentEvidence"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/pages/{page}": {
+      "get": {
+        "operationId": "pageImage",
+        "summary": "Rendered page image (PNG) for the evidence viewer",
+        "tags": [
+          "evidence"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/findings/{finding_id}/review": {
+      "post": {
+        "operationId": "reviewFinding",
+        "summary": "Record an officer decision on a finding (reason required, audited)",
+        "tags": [
+          "findings"
+        ],
+        "parameters": [
+          {
+            "name": "finding_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "OFFICER",
+          "ADMIN"
+        ]
+      }
+    },
+    "/api/v1/rules": {
+      "get": {
+        "operationId": "getRules",
+        "summary": "Active rule pack with clause references and version history",
+        "tags": [
+          "rules"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePackOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/rules/proposals": {
+      "post": {
+        "operationId": "proposeRules",
+        "summary": "Propose a new rule-pack version by changing numeric parameters",
+        "tags": [
+          "rules"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleProposalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleProposalOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "ADMIN"
+        ]
+      }
+    },
+    "/api/v1/rules/versions/{version_id}/activate": {
+      "post": {
+        "operationId": "activateRules",
+        "summary": "Activate a proposed version (must be a different administrator from the proposer)",
+        "tags": [
+          "rules"
+        ],
+        "parameters": [
+          {
+            "name": "version_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePackVersionOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "ADMIN"
+        ]
+      }
+    },
+    "/api/v1/audit": {
+      "get": {
+        "operationId": "listAudit",
+        "summary": "Audit events, newest first",
+        "tags": [
+          "audit"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by application",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max events (\u2264 500)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEventOut"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "OFFICER",
+          "ADMIN",
+          "AUDITOR"
+        ]
+      }
+    },
+    "/api/v1/audit/verify": {
+      "get": {
+        "operationId": "verifyAudit",
+        "summary": "Recompute the hash chain and report the first broken event",
+        "tags": [
+          "audit"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditVerifyOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "OFFICER",
+          "ADMIN",
+          "AUDITOR"
+        ]
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "operationId": "dashboard",
+        "summary": "Role-scoped counts computed from stored data",
+        "tags": [
+          "dashboard"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/benchmark": {
+      "get": {
+        "operationId": "benchmark",
+        "summary": "Latest synthetic benchmark report (produced by backend/eval/benchmark.py)",
+        "tags": [
+          "dashboard"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "OFFICER",
+          "ADMIN",
+          "AUDITOR"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health",
+        "summary": "Liveness probe",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/ready": {
+      "get": {
+        "operationId": "ready",
+        "summary": "Readiness probe (database, rule pack, storage, OCR)",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "operationId": "meta",
+        "summary": "Enumerations and configuration the UI needs",
+        "tags": [
+          "system"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApplicationCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "enum": [
+              "EOA_EXISTING",
+              "EOA_INTAKE_INCREASE"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "academic_year": {
+            "pattern": "^20\\d{2}-\\d{2}$",
+            "title": "Academic Year",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "academic_year"
+        ],
+        "title": "ApplicationCreate",
+        "type": "object"
+      },
+      "ApplicationDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "institution": {
+            "$ref": "#/components/schemas/InstitutionOut"
+          },
+          "category": {
+            "enum": [
+              "EOA_EXISTING",
+              "EOA_INTAKE_INCREASE"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "category_label": {
+            "title": "Category Label",
+            "type": "string"
+          },
+          "academic_year": {
+            "title": "Academic Year",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "DRAFT",
+              "PROCESSING",
+              "READY_FOR_SCRUTINY",
+              "DEFICIENCIES_FLAGGED",
+              "MANUAL_REVIEW_REQUIRED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/FindingCounts"
+          },
+          "documents_uploaded": {
+            "title": "Documents Uploaded",
+            "type": "integer"
+          },
+          "documents_required": {
+            "title": "Documents Required",
+            "type": "integer"
+          },
+          "checklist": {
+            "items": {
+              "$ref": "#/components/schemas/ChecklistItemOut"
+            },
+            "title": "Checklist",
+            "type": "array"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentOut"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "latest_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "active_jobs": {
+            "items": {
+              "$ref": "#/components/schemas/JobOut"
+            },
+            "title": "Active Jobs",
+            "type": "array"
+          },
+          "rule_pack_version": {
+            "title": "Rule Pack Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "institution",
+          "category",
+          "category_label",
+          "academic_year",
+          "status",
+          "created_at",
+          "updated_at",
+          "submitted_at",
+          "counts",
+          "documents_uploaded",
+          "documents_required",
+          "checklist",
+          "documents",
+          "latest_run",
+          "active_jobs",
+          "rule_pack_version"
+        ],
+        "title": "ApplicationDetail",
+        "type": "object"
+      },
+      "ApplicationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "institution": {
+            "$ref": "#/components/schemas/InstitutionOut"
+          },
+          "category": {
+            "enum": [
+              "EOA_EXISTING",
+              "EOA_INTAKE_INCREASE"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "category_label": {
+            "title": "Category Label",
+            "type": "string"
+          },
+          "academic_year": {
+            "title": "Academic Year",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "DRAFT",
+              "PROCESSING",
+              "READY_FOR_SCRUTINY",
+              "DEFICIENCIES_FLAGGED",
+              "MANUAL_REVIEW_REQUIRED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/FindingCounts"
+          },
+          "documents_uploaded": {
+            "title": "Documents Uploaded",
+            "type": "integer"
+          },
+          "documents_required": {
+            "title": "Documents Required",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "institution",
+          "category",
+          "category_label",
+          "academic_year",
+          "status",
+          "created_at",
+          "updated_at",
+          "submitted_at",
+          "counts",
+          "documents_uploaded",
+          "documents_required"
+        ],
+        "title": "ApplicationSummary",
+        "type": "object"
+      },
+      "AuditEventOut": {
+        "additionalProperties": false,
+        "properties": {
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "ts": {
+            "title": "Ts",
+            "type": "string"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Id"
+          },
+          "actor_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Role"
+          },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Name"
+          },
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "object_type": {
+            "title": "Object Type",
+            "type": "string"
+          },
+          "object_id": {
+            "title": "Object Id",
+            "type": "string"
+          },
+          "application_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Application Id"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "prev_hash": {
+            "title": "Prev Hash",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seq",
+          "ts",
+          "actor_id",
+          "actor_role",
+          "actor_name",
+          "action",
+          "object_type",
+          "object_id",
+          "application_id",
+          "payload",
+          "hash",
+          "prev_hash"
+        ],
+        "title": "AuditEventOut",
+        "type": "object"
+      },
+      "AuditVerifyOut": {
+        "additionalProperties": false,
+        "properties": {
+          "valid": {
+            "title": "Valid",
+            "type": "boolean"
+          },
+          "events_checked": {
+            "title": "Events Checked",
+            "type": "integer"
+          },
+          "first_broken_seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Broken Seq"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          },
+          "head_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head Hash"
+          }
+        },
+        "required": [
+          "valid",
+          "events_checked",
+          "first_broken_seq",
+          "problem",
+          "head_hash"
+        ],
+        "title": "AuditVerifyOut",
+        "type": "object"
+      },
+      "ChecklistItemOut": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_type": {
+            "enum": [
+              "eoa_letter",
+              "affidavit",
+              "fire_noc",
+              "building_stability",
+              "faculty_summary",
+              "infra_photo"
+            ],
+            "title": "Doc Type",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "doc_type",
+          "label",
+          "required",
+          "note",
+          "document"
+        ],
+        "title": "ChecklistItemOut",
+        "type": "object"
+      },
+      "ClaimOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "value_raw": {
+            "title": "Value Raw",
+            "type": "string"
+          },
+          "value_norm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Norm"
+          },
+          "value_type": {
+            "title": "Value Type",
+            "type": "string"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "bbox": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Bbox",
+            "type": "array"
+          },
+          "page_size": {
+            "items": {
+              "type": "number"
+            },
+            "title": "Page Size",
+            "type": "array"
+          },
+          "extractor": {
+            "title": "Extractor",
+            "type": "string"
+          },
+          "confidence": {
+            "title": "Confidence",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "field",
+          "value_raw",
+          "value_norm",
+          "value_type",
+          "page",
+          "bbox",
+          "page_size",
+          "extractor",
+          "confidence"
+        ],
+        "title": "ClaimOut",
+        "type": "object"
+      },
+      "ClauseOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "ref",
+          "status",
+          "url"
+        ],
+        "title": "ClauseOut",
+        "type": "object"
+      },
+      "DashboardOut": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "enum": [
+              "INSTITUTION",
+              "OFFICER",
+              "ADMIN",
+              "AUDITOR"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "applications": {
+            "title": "Applications",
+            "type": "integer"
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Status",
+            "type": "object"
+          },
+          "open_findings": {
+            "title": "Open Findings",
+            "type": "integer"
+          },
+          "findings_by_source": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Findings By Source",
+            "type": "object"
+          },
+          "verification_by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Verification By Status",
+            "type": "object"
+          },
+          "reviews_recorded": {
+            "title": "Reviews Recorded",
+            "type": "integer"
+          },
+          "simulated_sources_in_use": {
+            "title": "Simulated Sources In Use",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "role",
+          "applications",
+          "by_status",
+          "open_findings",
+          "findings_by_source",
+          "verification_by_status",
+          "reviews_recorded",
+          "simulated_sources_in_use"
+        ],
+        "title": "DashboardOut",
+        "type": "object"
+      },
+      "DocumentEvidence": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DocumentOut"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimOut"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "verifications": {
+            "items": {
+              "$ref": "#/components/schemas/VerificationOut"
+            },
+            "title": "Verifications",
+            "type": "array"
+          },
+          "integrity": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Integrity",
+            "type": "array"
+          },
+          "extraction": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction"
+          }
+        },
+        "required": [
+          "document",
+          "claims",
+          "verifications",
+          "integrity",
+          "extraction"
+        ],
+        "title": "DocumentEvidence",
+        "type": "object"
+      },
+      "DocumentOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "doc_type": {
+            "enum": [
+              "eoa_letter",
+              "affidavit",
+              "fire_noc",
+              "building_stability",
+              "faculty_summary",
+              "infra_photo"
+            ],
+            "title": "Doc Type",
+            "type": "string"
+          },
+          "doc_type_label": {
+            "title": "Doc Type Label",
+            "type": "string"
+          },
+          "detected_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected Type"
+          },
+          "original_name": {
+            "title": "Original Name",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "mime": {
+            "title": "Mime",
+            "type": "string"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "has_text_layer": {
+            "title": "Has Text Layer",
+            "type": "boolean"
+          },
+          "uploaded_at": {
+            "title": "Uploaded At",
+            "type": "string"
+          },
+          "processing_state": {
+            "enum": [
+              "QUEUED",
+              "PROCESSING",
+              "DONE",
+              "FAILED"
+            ],
+            "title": "Processing State",
+            "type": "string"
+          },
+          "verification_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "VERIFIED",
+                  "MISMATCH_DETECTED",
+                  "EXPIRED",
+                  "VERIFICATION_PENDING",
+                  "SOURCE_UNAVAILABLE",
+                  "MANUAL_REVIEW_REQUIRED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Status"
+          },
+          "superseded": {
+            "title": "Superseded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "doc_type",
+          "doc_type_label",
+          "detected_type",
+          "original_name",
+          "sha256",
+          "size_bytes",
+          "mime",
+          "pages",
+          "has_text_layer",
+          "uploaded_at",
+          "processing_state",
+          "verification_status",
+          "superseded"
+        ],
+        "title": "DocumentOut",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "details": {
+            "default": null,
+            "title": "Details"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorOut": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorOut",
+        "type": "object"
+      },
+      "EvidenceRef": {
+        "additionalProperties": true,
+        "properties": {
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Document Id"
+          },
+          "doc_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Doc Type"
+          },
+          "document_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Document Name"
+          },
+          "claim_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Claim Id"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Field"
+          },
+          "value": {
+            "default": null,
+            "title": "Value"
+          },
+          "normalized": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Normalized"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Page"
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Bbox"
+          },
+          "page_size": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Page Size"
+          },
+          "extractor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Extractor"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Confidence"
+          },
+          "other_application": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Other Application"
+          }
+        },
+        "title": "EvidenceRef",
+        "type": "object"
+      },
+      "FindingCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "deficiencies": {
+            "title": "Deficiencies",
+            "type": "integer"
+          },
+          "reviews": {
+            "title": "Reviews",
+            "type": "integer"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "integer"
+          },
+          "dismissed": {
+            "title": "Dismissed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active",
+          "deficiencies",
+          "reviews",
+          "resolved",
+          "dismissed"
+        ],
+        "title": "FindingCounts",
+        "type": "object"
+      },
+      "FindingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "application_id": {
+            "title": "Application Id",
+            "type": "string"
+          },
+          "source_kind": {
+            "enum": [
+              "RULE",
+              "INTEGRITY",
+              "DUPLICATE",
+              "VERIFICATION"
+            ],
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "rule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rule Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "DEFICIENCY",
+              "REVIEW",
+              "INFO"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "OPEN",
+              "CONFIRMED",
+              "DISMISSED",
+              "ESCALATED",
+              "CLARIFICATION_REQUESTED",
+              "RESOLVED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "remedy": {
+            "title": "Remedy",
+            "type": "string"
+          },
+          "fix_doc_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Doc Type"
+          },
+          "action_owner": {
+            "enum": [
+              "INSTITUTION",
+              "OFFICER"
+            ],
+            "title": "Action Owner",
+            "type": "string"
+          },
+          "advisory": {
+            "const": true,
+            "title": "Advisory",
+            "type": "boolean"
+          },
+          "clause_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clause Status"
+          },
+          "proof": {
+            "additionalProperties": true,
+            "title": "Proof",
+            "type": "object"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRef"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewOut"
+            },
+            "title": "Reviews",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "application_id",
+          "source_kind",
+          "rule_id",
+          "title",
+          "severity",
+          "state",
+          "explanation",
+          "remedy",
+          "fix_doc_type",
+          "action_owner",
+          "advisory",
+          "clause_status",
+          "proof",
+          "evidence",
+          "created_at",
+          "resolved_at",
+          "reviews"
+        ],
+        "title": "FindingOut",
+        "type": "object"
+      },
+      "HealthOut": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Checks",
+            "type": "object"
+          }
+        },
+        "required": [
+          "status",
+          "checks"
+        ],
+        "title": "HealthOut",
+        "type": "object"
+      },
+      "InstitutionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "aicte_permanent_id": {
+            "title": "Aicte Permanent Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "aicte_permanent_id",
+          "name",
+          "state"
+        ],
+        "title": "InstitutionOut",
+        "type": "object"
+      },
+      "JobOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "PROCESS_DOCUMENT",
+              "VALIDATE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "DONE",
+              "FAILED"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "application_id": {
+            "title": "Application Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "state",
+          "stage",
+          "progress",
+          "error",
+          "document_id",
+          "application_id"
+        ],
+        "title": "JobOut",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "MetaOut": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_types": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Doc Types",
+            "type": "object"
+          },
+          "categories": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Categories",
+            "type": "object"
+          },
+          "application_statuses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Application Statuses",
+            "type": "array"
+          },
+          "verification_statuses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Verification Statuses",
+            "type": "array"
+          },
+          "default_academic_year": {
+            "title": "Default Academic Year",
+            "type": "string"
+          },
+          "rule_pack_version": {
+            "title": "Rule Pack Version",
+            "type": "string"
+          },
+          "max_upload_bytes": {
+            "title": "Max Upload Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "doc_types",
+          "categories",
+          "application_statuses",
+          "verification_statuses",
+          "default_academic_year",
+          "rule_pack_version",
+          "max_upload_bytes"
+        ],
+        "title": "MetaOut",
+        "type": "object"
+      },
+      "OkOut": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "const": true,
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "title": "OkOut",
+        "type": "object"
+      },
+      "RepairAction": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "step": {
+            "title": "Step",
+            "type": "integer"
+          },
+          "owner": {
+            "enum": [
+              "INSTITUTION",
+              "OFFICER"
+            ],
+            "title": "Owner",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "doc_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doc Type"
+          },
+          "details": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "resolves": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Resolves",
+            "type": "array"
+          },
+          "finding_titles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Finding Titles",
+            "type": "array"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "integer"
+          },
+          "severity": {
+            "enum": [
+              "DEFICIENCY",
+              "REVIEW",
+              "INFO"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "step",
+          "owner",
+          "title",
+          "doc_type",
+          "resolves",
+          "finding_titles",
+          "priority",
+          "severity"
+        ],
+        "title": "RepairAction",
+        "type": "object"
+      },
+      "RepairPlanOut": {
+        "additionalProperties": false,
+        "properties": {
+          "institution_actions": {
+            "items": {
+              "$ref": "#/components/schemas/RepairAction"
+            },
+            "title": "Institution Actions",
+            "type": "array"
+          },
+          "officer_actions": {
+            "items": {
+              "$ref": "#/components/schemas/RepairAction"
+            },
+            "title": "Officer Actions",
+            "type": "array"
+          },
+          "open_findings": {
+            "title": "Open Findings",
+            "type": "integer"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "institution_actions",
+          "officer_actions",
+          "open_findings",
+          "note"
+        ],
+        "title": "RepairPlanOut",
+        "type": "object"
+      },
+      "ReviewOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reviewer_name": {
+            "title": "Reviewer Name",
+            "type": "string"
+          },
+          "reviewer_role": {
+            "enum": [
+              "INSTITUTION",
+              "OFFICER",
+              "ADMIN",
+              "AUDITOR"
+            ],
+            "title": "Reviewer Role",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "CONFIRM",
+              "DISMISS",
+              "ESCALATE",
+              "REQUEST_CLARIFICATION"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reviewer_name",
+          "reviewer_role",
+          "decision",
+          "reason",
+          "created_at"
+        ],
+        "title": "ReviewOut",
+        "type": "object"
+      },
+      "ReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "CONFIRM",
+              "DISMISS",
+              "ESCALATE",
+              "REQUEST_CLARIFICATION"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "ReviewRequest",
+        "type": "object"
+      },
+      "RuleDiffEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": {
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "param": {
+            "title": "Param",
+            "type": "string"
+          },
+          "old": {
+            "title": "Old"
+          },
+          "new": {
+            "title": "New"
+          }
+        },
+        "required": [
+          "rule_id",
+          "param",
+          "old",
+          "new"
+        ],
+        "title": "RuleDiffEntry",
+        "type": "object"
+      },
+      "RuleOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "DEFICIENCY",
+              "REVIEW",
+              "INFO"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "clause": {
+            "$ref": "#/components/schemas/ClauseOut"
+          },
+          "remedy": {
+            "title": "Remedy",
+            "type": "string"
+          },
+          "applies_to": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applies To"
+          },
+          "params": {
+            "additionalProperties": true,
+            "title": "Params",
+            "type": "object"
+          },
+          "expr": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expr"
+          },
+          "inputs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sources"
+          },
+          "doc_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doc Type"
+          },
+          "on_or_after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Or After"
+          },
+          "reads": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reads",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "type",
+          "severity",
+          "clause",
+          "remedy",
+          "applies_to",
+          "params",
+          "expr",
+          "inputs",
+          "field",
+          "sources",
+          "doc_type",
+          "on_or_after",
+          "reads"
+        ],
+        "title": "RuleOut",
+        "type": "object"
+      },
+      "RulePackOut": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/RulePackVersionOut"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "source": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Source",
+            "type": "object"
+          },
+          "reference_dates": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Reference Dates",
+            "type": "object"
+          },
+          "categories": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Categories",
+            "type": "object"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleOut"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/RulePackVersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "title",
+          "source",
+          "reference_dates",
+          "categories",
+          "rules",
+          "versions"
+        ],
+        "title": "RulePackOut",
+        "type": "object"
+      },
+      "RulePackVersionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pack": {
+            "title": "Pack",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "PROPOSED",
+              "ACTIVE",
+              "RETIRED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "change_note": {
+            "title": "Change Note",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "proposed_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed By Name"
+          },
+          "activated_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated By Name"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          }
+        },
+        "required": [
+          "id",
+          "pack",
+          "version",
+          "status",
+          "change_note",
+          "content_hash",
+          "proposed_by_name",
+          "activated_by_name",
+          "created_at",
+          "activated_at"
+        ],
+        "title": "RulePackVersionOut",
+        "type": "object"
+      },
+      "RuleProposalOut": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "$ref": "#/components/schemas/RulePackVersionOut"
+          },
+          "diff": {
+            "items": {
+              "$ref": "#/components/schemas/RuleDiffEntry"
+            },
+            "title": "Diff",
+            "type": "array"
+          }
+        },
+        "required": [
+          "version",
+          "diff"
+        ],
+        "title": "RuleProposalOut",
+        "type": "object"
+      },
+      "RuleProposalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "minProperties": 1,
+            "title": "Changes",
+            "type": "object"
+          },
+          "note": {
+            "maxLength": 500,
+            "minLength": 10,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "changes",
+          "note"
+        ],
+        "title": "RuleProposalRequest",
+        "type": "object"
+      },
+      "RunOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "rule_pack_version": {
+            "title": "Rule Pack Version",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "affected_rules": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Rules",
+            "type": "array"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "id",
+          "trigger",
+          "rule_pack_version",
+          "started_at",
+          "finished_at",
+          "affected_rules",
+          "summary"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
+      "SessionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserOut"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user",
+          "expires_at"
+        ],
+        "title": "SessionOut",
+        "type": "object"
+      },
+      "UploadResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DocumentOut"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobOut"
+          }
+        },
+        "required": [
+          "document",
+          "job"
+        ],
+        "title": "UploadResponse",
+        "type": "object"
+      },
+      "UserOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "INSTITUTION",
+              "OFFICER",
+              "ADMIN",
+              "AUDITOR"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "institution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution Id"
+          },
+          "institution_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Institution Name"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "role",
+          "institution_id",
+          "institution_name"
+        ],
+        "title": "UserOut",
+        "type": "object"
+      },
+      "VerificationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "integer"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "VERIFIED",
+              "MISMATCH_DETECTED",
+              "EXPIRED",
+              "VERIFICATION_PENDING",
+              "SOURCE_UNAVAILABLE",
+              "MANUAL_REVIEW_REQUIRED"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "simulated": {
+            "title": "Simulated",
+            "type": "boolean"
+          },
+          "request_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Ref"
+          },
+          "response_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Hash"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "tier",
+          "channel",
+          "status",
+          "simulated",
+          "request_ref",
+          "response_hash",
+          "detail",
+          "created_at"
+        ],
+        "title": "VerificationOut",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "pramaan_session"
+      },
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "session": []
+    },
+    {
+      "bearer": []
+    }
+  ]
+}

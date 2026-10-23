@@ -1,0 +1,14 @@
+{
+  "name": "pramaan",
+  "private": true,
+  "version": "1.0.0",
+  "description": "PRAMAAN root workspace wrapper",
+  "scripts": {
+    "postinstall": "npm --prefix front install",
+    "start": "npm --prefix front start",
+    "dev": "npm --prefix front run dev",
+    "build": "npm --prefix front run build",
+    "typecheck": "npm --prefix front run typecheck",
+    "typecheck:offline": "npm --prefix front run typecheck:offline"
+  }
+}
