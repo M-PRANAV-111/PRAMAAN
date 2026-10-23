@@ -2676,6 +2676,61 @@
           "any authenticated"
         ]
       }
+    },
+    "/api/v1/documents/{document_id}/ai-suggestions/review": {
+      "post": {
+        "operationId": "reviewAiSuggestion",
+        "summary": "Confirm or dismiss the open AI suggestions for one field (reason required, audited)",
+        "tags": [
+          "evidence"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSuggestionReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "OFFICER",
+          "ADMIN"
+        ]
+      }
     }
   },
   "components": {
@@ -3103,6 +3158,39 @@
           "model"
         ],
         "title": "AiSuggestionOut",
+        "type": "object"
+      },
+      "AiSuggestionReview": {
+        "additionalProperties": false,
+        "description": "An officer's decision on an AI suggestion that could not be grounded on the page.",
+        "properties": {
+          "field": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Field",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "CONFIRM",
+              "DISMISS"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "decision",
+          "reason"
+        ],
+        "title": "AiSuggestionReview",
         "type": "object"
       },
       "ApplicationCreate": {

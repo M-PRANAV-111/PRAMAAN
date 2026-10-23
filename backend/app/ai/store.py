@@ -1,11 +1,36 @@
 """Small persistence helpers shared by the AI pipeline steps. All of them use the caller's connection."""
 from __future__ import annotations
 
+import re
 import sqlite3
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from .. import audit
 from ..db import dumps, loads, new_id, now_iso
+
+
+@contextmanager
+def savepoint(conn: sqlite3.Connection, name: str) -> Iterator[None]:
+    """A unit of AI bookkeeping that either happens entirely or not at all, without ending the caller's transaction."""
+    conn.execute(f"SAVEPOINT {name}")
+    try:
+        yield
+    except BaseException:
+        conn.execute(f"ROLLBACK TO {name}")
+        raise
+    finally:
+        conn.execute(f"RELEASE {name}")
+
+
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]+")
+
+
+def clean_text(value: str | None, limit: int = 120) -> str | None:
+    """Model-supplied text shown to people: no control characters, bounded length."""
+    if value is None:
+        return None
+    return _CONTROL.sub(" ", value).strip()[:limit]
 
 
 def add_job_note(conn: sqlite3.Connection, job_id: str, text: str) -> None:
@@ -60,14 +85,15 @@ def replace_suggestions(conn: sqlite3.Connection, document_id: str, application_
         conn.execute(
             "INSERT INTO ai_suggestions (id, document_id, application_id, field, value, page, quote, reason, model, status,"
             " created_at) VALUES (?,?,?,?,?,?,?,?,?, 'OPEN', ?)",
-            (new_id("sug"), document_id, application_id, s["field"], s["value"], s.get("page"), s.get("quote"),
-             s["reason"], s["model"], now_iso()))
+            (new_id("sug"), document_id, application_id, s["field"], clean_text(s["value"]), s.get("page"),
+             clean_text(s.get("quote"), 300), s["reason"], s["model"], now_iso()))
 
 
 def suggestions_for(conn: sqlite3.Connection, document_id: str) -> list[dict[str, Any]]:
-    """Rows shaped like ``AiSuggestionOut`` (the quote stays in the database)."""
+    """Open suggestions, shaped like ``AiSuggestionOut`` (the quote stays in the database; reviewed ones drop out)."""
     return [{"field": r["field"], "value": r["value"], "page": r["page"], "reason": r["reason"], "model": r["model"]}
-            for r in conn.execute("SELECT * FROM ai_suggestions WHERE document_id=? ORDER BY field, rowid", (document_id,))]
+            for r in conn.execute("SELECT * FROM ai_suggestions WHERE document_id=? AND status='OPEN' ORDER BY field, rowid",
+                                  (document_id,))]
 
 
 def audit_system(conn: sqlite3.Connection, action: str, object_type: str, object_id: str,

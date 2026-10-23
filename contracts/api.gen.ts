@@ -106,6 +106,12 @@ export interface AiSuggestionOut {
   model: string;
 }
 
+export interface AiSuggestionReview {
+  field: string;
+  decision: "CONFIRM" | "DISMISS";
+  reason: string;
+}
+
 export interface ApplicationCreate {
   category: "EOA_EXISTING" | "EOA_INTAKE_INCREASE";
   academic_year: string;
@@ -706,6 +712,7 @@ export const endpoints = {
   aiKillSwitch: { method: "POST", path: "/api/v1/ai/kill-switch" },
   applicationRouting: { method: "GET", path: "/api/v1/applications/{application_id}/routing" },
   jobNotes: { method: "GET", path: "/api/v1/jobs/{job_id}/notes" },
+  reviewAiSuggestion: { method: "POST", path: "/api/v1/documents/{document_id}/ai-suggestions/review" },
 } as const;
 
 export interface EndpointTypes {
@@ -769,5 +776,6 @@ export interface EndpointTypes {
   aiKillSwitch: { response: AiStatusOut; body: KillSwitchRequest };
   applicationRouting: { response: RoutingOut; body: undefined };
   jobNotes: { response: JobNoteOut[]; body: undefined };
+  reviewAiSuggestion: { response: OkOut; body: AiSuggestionReview };
 }
 export type EndpointName = keyof typeof endpoints;

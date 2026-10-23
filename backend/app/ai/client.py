@@ -2,9 +2,12 @@
 
     primary model -> (429/5xx/timeout) -> secondary model -> (429/5xx/timeout) -> fallback provider -> none
 
-At most three provider requests are made per call. Everything persistent (cache, counters, status) goes through
-the connection the caller already holds, so it joins the caller's transaction and the pipeline never opens a
-second writer. Logs carry task, provider, model, latency, token counts, cache flag and an error *code* only.
+At most three provider requests are made per call. Persistent state (cache, counters, status) goes through the
+connection the caller already holds, so it joins the caller's transaction. When the pipeline hands us a connection
+inside its write transaction, the network round-trips run with that write lock *released* (``outside_write_lock``):
+a slow provider must not stall every other writer. The accounting for a paid request is checkpointed straight away so
+a later local failure cannot lose it. Logs carry task, provider, model, latency, token counts, cache flag and an error
+*code* only.
 """
 from __future__ import annotations
 
@@ -13,9 +16,10 @@ import logging
 import random
 import sqlite3
 import time
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Callable
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, ContextManager, Iterator
 
 from pydantic import BaseModel, ValidationError
 
@@ -29,6 +33,7 @@ from .types import (AIError, ClassifyRequest, ClassifyResponse, ClassifyResult, 
 
 log = logging.getLogger("pramaan.ai")
 MAX_ATTEMPTS = 3
+CACHE_TTL_DAYS = 30
 
 
 @dataclass
@@ -49,6 +54,24 @@ class Outcome:
 
 def today() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+@contextmanager
+def outside_write_lock(conn: sqlite3.Connection) -> Iterator[None]:
+    """Commit the open write transaction, let the caller do slow I/O, then take the write lock again.
+
+    Used by pipeline steps that were handed a connection inside ``BEGIN IMMEDIATE``. Everything written before the
+    block is committed (the pipeline re-reads it afterwards); the work after it starts a fresh transaction that the
+    pipeline commits as usual.
+    """
+    if not conn.in_transaction:
+        yield
+        return
+    conn.execute("COMMIT")
+    try:
+        yield
+    finally:
+        conn.execute("BEGIN IMMEDIATE")
 
 
 # --------------------------------------------------------------------------- persistent state helpers
@@ -93,11 +116,13 @@ def record_error(conn: sqlite3.Connection, code: str) -> None:
 class AIClient:
     def __init__(self, conn: sqlite3.Connection, cfg: AIConfig | None = None, *,
                  chain: list[AIProvider] | None = None, sleep: Callable[[float], None] = time.sleep,
-                 clock: Callable[[], float] = time.monotonic, rng: Callable[[], float] = random.random):
+                 clock: Callable[[], float] = time.monotonic, rng: Callable[[], float] = random.random,
+                 unlock: Callable[[sqlite3.Connection], ContextManager[None]] | None = None):
         self.conn = conn
         self.cfg = cfg or get_config()
         self._chain = chain
         self._sleep, self._clock, self._rng = sleep, clock, rng
+        self._unlock = unlock
 
     # -------------------------------------------------------------------------------- public tasks
     def extract(self, req: ExtractRequest, subject_sha: str, pages: int) -> Outcome:
@@ -128,6 +153,15 @@ class AIClient:
         return result_cls(available=True, response=response, provider="cache", model=row["model"],
                           usage=Usage(row["input_tokens"], row["output_tokens"], 0))
 
+    def _network(self) -> ContextManager[None]:
+        return self._unlock(self.conn) if self._unlock else nullcontext()
+
+    def _checkpoint(self) -> None:
+        """Make the accounting of what was just spent durable, whatever the caller does next."""
+        if self._unlock and self.conn.in_transaction:
+            self.conn.execute("COMMIT")
+            self.conn.execute("BEGIN IMMEDIATE")
+
     def _call(self, task: str, request: Any, schema: type[BaseModel], result_cls: type[ProviderResult],
               subject_sha: str, pages: int, variant: str) -> Outcome:
         cfg = self.cfg
@@ -151,51 +185,73 @@ class AIClient:
         if pages and used["pages"] + pages > cfg.daily_page_budget:
             record_error(self.conn, "page_budget_exhausted")
             return Outcome(skipped="page_budget_exhausted")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=CACHE_TTL_DAYS)).isoformat(timespec="seconds")
+        self.conn.execute("DELETE FROM ai_cache WHERE created_at < ?", (cutoff,))
 
+        # ------------------------------------------------ the provider requests (no database access in here)
         started = self._clock()
         attempts, last_code = 0, "unavailable"
-        for index, provider in enumerate(chain):
-            if attempts >= MAX_ATTEMPTS:
-                break
-            if self._clock() - started > cfg.call_deadline_seconds:
-                last_code = "deadline"
-                break
-            if attempts:  # exponential backoff with jitter between real attempts
-                self._sleep(min(4.0, 0.5 * 2 ** (attempts - 1)) * (0.5 + self._rng()))
-            try:
-                result = getattr(provider, task)(request)
-                if not result.available:
-                    raise NotAvailable()
-            except (MissingKey, NotAvailable) as exc:  # nothing was sent, so it is not an attempt
-                last_code = exc.code
-                continue
-            except AIError as exc:
+        failures: list[tuple[str, str]] = []     # (provider name, error code) for every request that went out
+        winner: tuple[int, AIProvider, ProviderResult] | None = None
+        with self._network():
+            for index, provider in enumerate(chain):
+                if attempts >= MAX_ATTEMPTS:
+                    break
+                remaining = cfg.call_deadline_seconds - (self._clock() - started)
+                if remaining <= 0:
+                    last_code = "deadline"
+                    break
+                if attempts:  # exponential backoff with jitter between real attempts
+                    self._sleep(min(4.0, 0.5 * 2 ** (attempts - 1)) * (0.5 + self._rng()))
+                    remaining = cfg.call_deadline_seconds - (self._clock() - started)
+                    if remaining <= 0:
+                        last_code = "deadline"
+                        break
+                if hasattr(provider, "deadline_timeout"):  # one slow request cannot outlast the whole call's deadline
+                    provider.deadline_timeout = max(1.0, remaining)
+                try:
+                    result = getattr(provider, task)(request)
+                    if not result.available:
+                        raise NotAvailable()
+                except (MissingKey, NotAvailable) as exc:  # nothing was sent, so it is not an attempt
+                    last_code = exc.code
+                    continue
+                except AIError as exc:
+                    attempts += 1
+                    last_code = exc.code
+                    failures.append((provider.name, exc.code))
+                    log.warning("ai_call task=%s provider=%s model=%s cache=miss code=%s", task, provider.name,
+                                provider.model, exc.code)
+                    continue
                 attempts += 1
-                last_code = exc.code
-                _bump(self.conn, requests=1, pages=pages, failures=1)
-                record_error(self.conn, exc.code)
-                log.warning("ai_call task=%s provider=%s model=%s cache=miss code=%s", task, provider.name, provider.model,
-                            exc.code)
-                continue
-            attempts += 1
-            usage = result.usage
-            _bump(self.conn, requests=1, pages=pages, input_tokens=usage.input_tokens or 0,
-                  output_tokens=usage.output_tokens or 0, latency_ms=usage.latency_ms)
-            self.conn.execute(
-                "INSERT OR REPLACE INTO ai_cache (cache_key, subject_sha256, task, model, schema_version, prompt_version,"
-                " variant, response_json, input_tokens, output_tokens, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-                (self._key(subject_sha, task, provider.model, variant), subject_sha, task, provider.model, SCHEMA_VERSION,
-                 PROMPT_VERSION, variant, dumps(result.payload()), usage.input_tokens, usage.output_tokens, now_iso()))
-            set_state(self.conn, "fallback_active", "1" if index > 0 else "0")
-            log.info("ai_call task=%s provider=%s model=%s latency_ms=%d in_tokens=%s out_tokens=%s cache=miss code=ok",
-                     task, provider.name, provider.model, usage.latency_ms, usage.input_tokens, usage.output_tokens)
-            return Outcome(result, provider=provider.name, model=provider.model, attempts=attempts,
-                           latency_ms=usage.latency_ms)
-        if attempts:
-            set_state(self.conn, "fallback_active", "1")
-        else:
-            record_error(self.conn, last_code)
-        return Outcome(skipped=last_code, attempts=attempts)
+                winner = (index, provider, result)
+                break
+
+        # ------------------------------------------------------------------------- accounting (write lock held again)
+        for _, code in failures:
+            _bump(self.conn, requests=1, pages=pages, failures=1)
+            record_error(self.conn, code)
+        if winner is None:
+            if attempts:
+                set_state(self.conn, "fallback_active", "1")
+            else:
+                record_error(self.conn, last_code)
+            self._checkpoint()
+            return Outcome(skipped=last_code, attempts=attempts)
+        index, provider, result = winner
+        usage = result.usage
+        _bump(self.conn, requests=1, pages=pages, input_tokens=usage.input_tokens or 0,
+              output_tokens=usage.output_tokens or 0, latency_ms=usage.latency_ms)
+        self.conn.execute(
+            "INSERT OR REPLACE INTO ai_cache (cache_key, subject_sha256, task, model, schema_version, prompt_version,"
+            " variant, response_json, input_tokens, output_tokens, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (self._key(subject_sha, task, provider.model, variant), subject_sha, task, provider.model, SCHEMA_VERSION,
+             PROMPT_VERSION, variant, dumps(result.payload()), usage.input_tokens, usage.output_tokens, now_iso()))
+        set_state(self.conn, "fallback_active", "1" if index > 0 else "0")
+        self._checkpoint()
+        log.info("ai_call task=%s provider=%s model=%s latency_ms=%d in_tokens=%s out_tokens=%s cache=miss code=ok",
+                 task, provider.name, provider.model, usage.latency_ms, usage.input_tokens, usage.output_tokens)
+        return Outcome(result, provider=provider.name, model=provider.model, attempts=attempts, latency_ms=usage.latency_ms)
 
 
 # ------------------------------------------------------------------------------------------- status

@@ -27,6 +27,7 @@ API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 class GroqProvider:
     name = "groq"
+    deadline_timeout: float | None = None
 
     def __init__(self, api_key: str, model: str, timeout: float = 45.0, max_output_tokens: int = 1500):
         self._key = api_key
@@ -63,7 +64,7 @@ class GroqProvider:
         }
         started = time.monotonic()
         body = http.post_json(API_URL, {"Authorization": f"Bearer {self._key}", "Content-Type": "application/json"},
-                              payload, self._timeout)
+                              payload, min(self._timeout, self.deadline_timeout or self._timeout))
         latency = int((time.monotonic() - started) * 1000)
         try:
             choice = body["choices"][0]

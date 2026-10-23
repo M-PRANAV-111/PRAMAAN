@@ -239,7 +239,10 @@ def _record(conn: sqlite3.Connection, job_id: str, application_id: str, institut
                         " LIMIT 1", (application_id,)).fetchone()
     changed = prev is None or prev["state_key"] != rec.state_key
     actions: list[dict[str, Any]] = [] if changed else loads(prev["actions_json"], [])
-    settled = conn.execute("SELECT 1 FROM jobs WHERE application_id=? AND state IN ('QUEUED','RUNNING') AND id != ? LIMIT 1",
+    # Another job that is still before its own routing step will recompute and act; one already at ROUTING or beyond
+    # will not, so it must not keep this job from acting (two jobs finishing together would otherwise both hold back).
+    settled = conn.execute("SELECT 1 FROM jobs WHERE application_id=? AND id != ? AND (state='QUEUED' OR (state='RUNNING'"
+                           " AND COALESCE(stage_code,'') NOT IN ('ROUTING','DONE'))) LIMIT 1",
                            (application_id, job_id)).fetchone() is None
     link = f"/applications/{application_id}"
 

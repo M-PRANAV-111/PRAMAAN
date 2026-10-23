@@ -16,6 +16,8 @@ from .config import AIConfig
 
 _STAMP = "SYNTHETICNOTAREALDOCUMENT"
 _LETTERS = re.compile(r"[^A-Z]")
+_GRAM = 5            # OCR errors are local, so some 5-letter piece of the stamp usually survives
+_MAX_WINDOWS = 64    # bounds the cost on a dense page that does not carry the stamp
 
 
 @dataclass(frozen=True)
@@ -31,21 +33,22 @@ def page_has_stamp(text: str, ocr: bool = False) -> bool:
         return True
     if not ocr or len(squeezed) < len(_STAMP) - 4:
         return False
-    size = len(_STAMP)
-    for start in range(0, max(1, len(squeezed) - size + 5)):
-        window = squeezed[start:start + size]
-        if difflib.SequenceMatcher(None, window, _STAMP).ratio() >= 0.9:
-            return True
-    return False
+    starts: set[int] = set()
+    for k in range(len(_STAMP) - _GRAM + 1):  # candidate windows are anchored on pieces of the stamp that survived
+        gram, at = _STAMP[k:k + _GRAM], squeezed.find(_STAMP[k:k + _GRAM])
+        while at != -1 and len(starts) < _MAX_WINDOWS:
+            starts.add(max(0, at - k))
+            at = squeezed.find(gram, at + 1)
+    return any(difflib.SequenceMatcher(None, squeezed[s:s + len(_STAMP)], _STAMP).ratio() >= 0.9 for s in starts)
+
+
+def stamp_status(page_texts: dict[int, str], ocr_pages: set[int] | frozenset[int] = frozenset()) -> bool:
+    """Do all these pages carry the stamp? (An empty set of pages does not.)"""
+    return bool(page_texts) and all(page_has_stamp(text, ocr=page in ocr_pages) for page, text in page_texts.items())
 
 
 def decide(cfg: AIConfig, page_texts: dict[int, str], ocr_pages: set[int] | frozenset[int] = frozenset()) -> Decision:
     """May these pages be sent to an external provider?"""
     if cfg.data_policy == "allow_real":
         return Decision(True)
-    if not page_texts:
-        return Decision(False, "data_policy")
-    for page, text in page_texts.items():
-        if not page_has_stamp(text, ocr=page in ocr_pages):
-            return Decision(False, "data_policy")
-    return Decision(True)
+    return Decision(True) if stamp_status(page_texts, ocr_pages) else Decision(False, "data_policy")

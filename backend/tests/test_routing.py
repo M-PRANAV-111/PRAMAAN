@@ -357,6 +357,32 @@ class RoutingApiTests(CoreApiCase):
         self.assertNotIn("matched_", r.text)
         self.assertEqual(self.session("auditor@aicte.synthetic.in").get(f"{self.base}/applications/{godavari}/routing").status_code, 200)
 
+    def test_an_officer_can_clear_an_ai_suggestion_and_only_an_officer(self):
+        officer = self.session("officer@aicte.synthetic.in")
+        shakti = self.app_id(officer, "Shakti Institute")
+        doc = next(d for d in officer.get(f"{self.base}/applications/{shakti}").json()["documents"] if d["doc_type"] == "fire_noc")["id"]
+        with self.sql() as db:
+            db.execute("INSERT INTO ai_suggestions (id, document_id, application_id, field, value, page, quote, reason, model,"
+                       " status, created_at) VALUES ('sug-api', ?, ?, 'valid_to', '31-12-2099', 1, NULL, 'conflicts_with_page',"
+                       " 'm', 'OPEN', '2026-10-23T00:00:00+00:00')", (doc, shakti))
+        evidence = officer.get(f"{self.base}/documents/{doc}/evidence").json()
+        self.assertEqual([(s["field"], s["reason"]) for s in evidence["ai_suggestions"]], [("valid_to", "conflicts_with_page")])
+        self.assertIn("AI_SUGGESTION_UNCONFIRMED", {r["code"] for r in self.routing(officer, "Shakti Institute").json()["reasons"]})
+        url = f"{self.base}/documents/{doc}/ai-suggestions/review"
+        body = {"field": "valid_to", "decision": "DISMISS", "reason": "Checked the page; the date is as printed."}
+        self.assertEqual(self.client.post(url, json=body).status_code, 401)
+        self.assertEqual(self.session("nodal@shakti.synthetic.in").post(url, json=body).status_code, 403)
+        self.assertEqual(self.session("auditor@aicte.synthetic.in").post(url, json=body).status_code, 403)
+        self.assertEqual(officer.post(url, json={**body, "reason": "short"}).status_code, 422)
+        self.assertEqual(officer.post(url, json={**body, "field": "total_intake"}).status_code, 404)
+        self.assertEqual(officer.post(url, json=body).status_code, 200)
+        self.assertEqual(officer.post(url, json=body).status_code, 404)    # nothing open any more
+        self.assertEqual(officer.get(f"{self.base}/documents/{doc}/evidence").json()["ai_suggestions"], [])
+        self.assertNotIn("AI_SUGGESTION_UNCONFIRMED", {r["code"] for r in self.routing(officer, "Shakti Institute").json()["reasons"]})
+        events = self.session("auditor@aicte.synthetic.in").get(f"{self.base}/audit?limit=200").json()
+        self.assertIn("ai.suggestion_dismiss", {e["action"] for e in events})
+        self.assertNotIn("Checked the page", json.dumps(events))     # only a hash of the reason is audited
+
 
 if __name__ == "__main__":
     unittest.main()

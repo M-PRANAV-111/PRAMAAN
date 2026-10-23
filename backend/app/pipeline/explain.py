@@ -12,10 +12,11 @@ import hashlib
 import logging
 import re
 import sqlite3
+import time
 from typing import Any, Callable
 
 from ..ai import policy, store
-from ..ai.client import AIClient, kill_switch_engaged
+from ..ai.client import AIClient, kill_switch_engaged, outside_write_lock
 from ..ai.config import AIConfig, get_config
 from ..ai.types import ExplainRequest
 from ..db import dumps, loads, now_iso
@@ -27,6 +28,8 @@ from .findings import ACTIVE_STATES
 log = logging.getLogger("pramaan.ai")
 
 MAX_CHARS = 600
+MAX_CALLS_PER_STEP = 12        # findings beyond this are worded on the next run; the job is never held up by them
+STEP_SECONDS = 60.0           # time budget for all wording requests in one step
 FORBIDDEN = re.compile(r"\b(approv(?:e|es|ed|ing)|reject\w*|forg(?:e|ed|er|ery|ing)|fake\w*|fraud\w*|guarantee\w*)\b",
                        re.IGNORECASE)
 NUMBER_WORDS = frozenset("""two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen
@@ -149,11 +152,13 @@ def _application_synthetic(conn: sqlite3.Connection, cfg: AIConfig, application_
             return False
         state = store.document_state(conn, doc["id"])
         if state is None or state["synthetic"] is None:
-            result = extract.extract_pdf(LocalStorage().get(doc["sha256"]))
+            data = LocalStorage().get(doc["sha256"])
+            with outside_write_lock(conn):
+                result = extract.extract_pdf(data)
             sent = min(doc["pages"], cfg.max_pages)
             texts = ground.page_texts(result)
             ocr = {line.page for line in result.lines if line.source == "ocr"}
-            ok = policy.decide(cfg, {n: texts.get(n, "") for n in range(1, sent + 1)}, ocr).allowed
+            ok = policy.stamp_status({n: texts.get(n, "") for n in range(1, sent + 1)}, ocr)
             store.set_synthetic(conn, doc["id"], ok)
             state = {"synthetic": ok}
         if not state["synthetic"]:
@@ -166,18 +171,18 @@ def explain_step(conn: sqlite3.Connection, job_id: str, app: dict[str, Any], sta
     cfg = get_config()
     if not cfg.enabled:
         return
-    conn.execute("SAVEPOINT ai_explain")
     try:
         _explain_all(conn, cfg, job_id, app["id"])
     except Exception as exc:  # noqa: BLE001 — templates remain in place
-        conn.execute("ROLLBACK TO ai_explain")
+        from .orchestrator import JobTimeout
+        if isinstance(exc, JobTimeout):
+            raise
         log.warning("ai_explain failed type=%s", type(exc).__name__)
         store.add_job_note(conn, job_id, "AI step skipped: error")
-    finally:
-        conn.execute("RELEASE ai_explain")
 
 
 def _explain_all(conn: sqlite3.Connection, cfg: AIConfig, job_id: str, application_id: str) -> None:
+    from .orchestrator import _check_deadline
     if kill_switch_engaged(conn):
         return
     synthetic = _application_synthetic(conn, cfg, application_id)
@@ -186,8 +191,9 @@ def _explain_all(conn: sqlite3.Connection, cfg: AIConfig, job_id: str, applicati
     if not synthetic:
         store.add_job_note(conn, job_id, "AI step skipped: data_policy")
         return
-    client = AIClient(conn, cfg)
-    accepted = rejected = 0
+    client = AIClient(conn, cfg, unlock=outside_write_lock)
+    accepted = rejected = calls = 0
+    started = time.monotonic()
     for row in conn.execute(f"SELECT * FROM findings WHERE application_id=? AND source_kind='RULE' AND state IN "
                             f"({','.join('?' * len(ACTIVE_STATES))}) ORDER BY created_at", (application_id, *ACTIVE_STATES)).fetchall():
         finding = dict(row)
@@ -198,18 +204,23 @@ def _explain_all(conn: sqlite3.Connection, cfg: AIConfig, job_id: str, applicati
         known = conn.execute("SELECT input_hash FROM finding_ai_text WHERE finding_id=?", (finding["id"],)).fetchone()
         if known and known["input_hash"] == digest:
             continue
+        if calls >= MAX_CALLS_PER_STEP or time.monotonic() - started > STEP_SECONDS:
+            break
+        _check_deadline()
+        calls += 1
         outcome = client.explain(ExplainRequest(facts), digest)
         if outcome.result is None:
             store.add_job_note(conn, job_id, f"AI step skipped: {outcome.skipped or 'unavailable'}")
-            return
+            break
         ok, why = validate(outcome.result.text, facts)
-        conn.execute(
-            "INSERT INTO finding_ai_text (finding_id, input_hash, status, language, text, model, reject_reason, created_at)"
-            " VALUES (?,?,?,'en',?,?,?,?) ON CONFLICT(finding_id) DO UPDATE SET input_hash=excluded.input_hash,"
-            " status=excluded.status, text=excluded.text, model=excluded.model, reject_reason=excluded.reject_reason,"
-            " created_at=excluded.created_at",
-            (finding["id"], digest, "accepted" if ok else "rejected", outcome.result.text.strip() if ok else None,
-             outcome.model, None if ok else why, now_iso()))
+        with store.savepoint(conn, "ai_explain_one"):
+            conn.execute(
+                "INSERT INTO finding_ai_text (finding_id, input_hash, status, language, text, model, reject_reason, created_at)"
+                " VALUES (?,?,?,'en',?,?,?,?) ON CONFLICT(finding_id) DO UPDATE SET input_hash=excluded.input_hash,"
+                " status=excluded.status, text=excluded.text, model=excluded.model, reject_reason=excluded.reject_reason,"
+                " created_at=excluded.created_at",
+                (finding["id"], digest, "accepted" if ok else "rejected", outcome.result.text.strip() if ok else None,
+                 outcome.model, None if ok else why, now_iso()))
         accepted += ok
         rejected += not ok
     if accepted or rejected:

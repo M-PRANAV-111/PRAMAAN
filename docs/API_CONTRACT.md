@@ -104,7 +104,7 @@ Import `register_step` from `app.pipeline.orchestrator` (also available in `app.
 
 ### AI layer and routing (migrations `0050_ai`, `0051_routing`)
 
-Contract: 60 operations, 70 schemas (`app/schemas_ai.py` holds the new shapes; `scripts/gen_contract.py` includes it). The AI layer registers through the hooks above and adds no other extension point.
+Contract: 61 operations, 71 schemas (`app/schemas_ai.py` holds the new shapes; `scripts/gen_contract.py` includes it). The AI layer registers through the hooks above and adds no other extension point.
 
 | Method | Path (under `/api/v1`) | Body → response | Access |
 |---|---|---|---|
@@ -112,6 +112,7 @@ Contract: 60 operations, 70 schemas (`app/schemas_ai.py` holds the new shapes; `
 | POST | `/ai/kill-switch` | `KillSwitchRequest` (`engaged`, reason ≥ 10 characters) → `AiStatusOut` | ADMIN; audited as `ai.kill_switch` with a reason hash |
 | GET | `/applications/{application_id}/routing` | → `RoutingOut` (`outcome`, `reasons[]`, `automated_actions[]`, `run_id`, `computed_at`, `ai_used`, `policy_version`) | Existing application visibility (object-level check) |
 | GET | `/jobs/{job_id}/notes` | → `JobNoteOut[]` (INFO notes such as `AI step skipped: data_policy`) | Existing application visibility |
+| POST | `/documents/{document_id}/ai-suggestions/review` | `AiSuggestionReview` (`field`, `decision` ∈ `CONFIRM` \| `DISMISS`, reason ≥ 10 characters) → `OkOut` | OFFICER, ADMIN; 404 when nothing is open for that field; audited as `ai.suggestion_confirm` / `ai.suggestion_dismiss` with a reason hash |
 
 `RoutingOut.outcome` is exactly one of `READY_FOR_SCRUTINY`, `CORRECTIONS_REQUIRED`, `OFFICER_REVIEW_REQUIRED`. The recommendation is computed from the application's present state on every request; stored rows (`routing_recommendations`, one per computation) are the history and carry the automated actions that were taken. It never changes `ApplicationSummary.status`. Reason codes: `MISSING_DOCUMENT`, `DEFICIENCY_OPEN`, `REVIEW_FINDING_OPEN`, `RULE_NOT_EVALUABLE`, `RULE_NOT_EVALUATED`, `INTEGRITY_INDICATOR_OPEN`, `DUPLICATE_INDICATOR_OPEN`, `DOCUMENT_TYPE_MISMATCH`, `SIMULATED_SOURCE_ONLY`, `VERIFICATION_MISMATCH`, `VERIFICATION_EXPIRED`, `SOURCE_UNAVAILABLE`, `MANUAL_REVIEW_REQUIRED`, `VERIFICATION_PENDING`, `LOW_CONFIDENCE_CLAIM`, `AI_SUGGESTION_UNCONFIRMED`, `DOCUMENT_PROCESSING_FAILED`, `PROCESSING_INCOMPLETE`, and `NO_OPEN_ISSUES` (READY only).
 

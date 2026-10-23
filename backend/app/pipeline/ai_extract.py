@@ -4,13 +4,15 @@ What it may change: it can add or replace a *claim*, but only for a value it fin
 field, with the real bounding box, extractor ``ai+text`` / ``ai+ocr`` and the match score as confidence. Everything
 else becomes a visible suggestion that no rule reads. A deterministic claim with confidence >= 0.95 is never
 overwritten. Any failure leaves the deterministic result intact and adds an INFO note to the job.
+
+The step is handed a connection inside the pipeline's write transaction. Slow work (re-reading scanned pages, the
+provider round-trips) runs with that write lock released, and everything it writes afterwards is one savepoint.
 """
 from __future__ import annotations
 
 import io
 import logging
 import sqlite3
-from dataclasses import dataclass
 from typing import Any, Callable
 
 import pdfplumber
@@ -18,7 +20,7 @@ from pypdf import PdfReader, PdfWriter
 
 from .. import audit
 from ..ai import ground, policy, store
-from ..ai.client import AIClient, kill_switch_engaged
+from ..ai.client import AIClient, kill_switch_engaged, outside_write_lock
 from ..ai.config import AIConfig, get_config
 from ..ai.types import AIError, ClassifyRequest, ExtractRequest, FieldInfo
 from ..db import dumps, loads, new_id, now_iso
@@ -34,6 +36,8 @@ log = logging.getLogger("pramaan.ai")
 CONFIDENT_CLAIM = 0.95          # a deterministic claim at or above this is never overwritten
 CLASSIFY_CONFIDENCE = 0.80      # a mismatch needs a confident, quoted model answer
 TYPE_MISMATCH_KIND = "AI_TYPE_MISMATCH"
+_STATE_AFTER_REVIEW = {"CONFIRM": "CONFIRMED", "DISMISS": "DISMISSED", "ESCALATE": "ESCALATED",
+                       "REQUEST_CLARIFICATION": "CLARIFICATION_REQUESTED"}
 
 
 # ------------------------------------------------------------------------------------ what the rules read
@@ -61,9 +65,14 @@ def read_fields_by_type(pack: RulePack) -> dict[str, set[str]]:
 
 
 # ------------------------------------------------------------------------------------------ small helpers
-def _text_layers(data: bytes) -> list[bool]:
+def _text_layers(data: bytes) -> tuple[list[bool], list[str]]:
+    """Per page: does it have a text layer, and what does it say? (No OCR: this is the cheap first look.)"""
+    layers, texts = [], []
     with pdfplumber.open(io.BytesIO(data)) as pdf:
-        return [sum(len(w["text"]) for w in page.extract_words()) >= extract.MIN_TEXT_CHARS for page in pdf.pages]
+        for page in pdf.pages:
+            layers.append(sum(len(w["text"]) for w in page.extract_words()) >= extract.MIN_TEXT_CHARS)
+            texts.append(page.extract_text() or "")
+    return layers, texts
 
 
 def _first_pages(data: bytes, count: int) -> bytes:
@@ -90,19 +99,15 @@ def ai_extract_step(conn: sqlite3.Connection, job_id: str, doc: dict[str, Any], 
     cfg = get_config()
     if not cfg.enabled or doc["doc_type"] in IMAGE_DOC_TYPES:
         return
-    conn.execute("SAVEPOINT ai_extract")
     try:
         _run(conn, cfg, job_id, doc, stage)
     except Exception as exc:  # noqa: BLE001 — the deterministic result must survive any AI failure
         from .orchestrator import JobTimeout
         if isinstance(exc, JobTimeout):
             raise
-        conn.execute("ROLLBACK TO ai_extract")
         code = exc.code if isinstance(exc, AIError) else "error"
         log.warning("ai_step failed code=%s type=%s", code, type(exc).__name__)
         _skip(conn, job_id, doc, code)
-    finally:
-        conn.execute("RELEASE ai_extract")
 
 
 def _run(conn: sqlite3.Connection, cfg: AIConfig, job_id: str, doc: dict[str, Any], stage: Callable[[str, str, int], None]) -> None:
@@ -110,74 +115,77 @@ def _run(conn: sqlite3.Connection, cfg: AIConfig, job_id: str, doc: dict[str, An
     fields = rule_fields(pack, doc["doc_type"])
     claims = {r["field"]: dict(r) for r in conn.execute("SELECT * FROM claims WHERE document_id=?", (doc["id"],))}
     data = LocalStorage().get(doc["sha256"])
+    sent = min(doc["pages"], cfg.max_pages)
 
-    layers = _text_layers(data)
+    layers, layer_texts = _text_layers(data)
     ocr_path = not all(layers)
     targets = {f.name for f in fields if f.name not in claims or claims[f.name]["value_norm"] is None
                or claims[f.name]["confidence"] < cfg.trigger_confidence}
     if ocr_path:
         targets = {f.name for f in fields}
-    classification_uncertain = False
-    if not ocr_path:
-        with pdfplumber.open(io.BytesIO(data)) as pdf:
-            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
-        classification_uncertain = extract.classify(text)[0] != doc["doc_type"]
+    classification_uncertain = (not ocr_path) and extract.classify("\n".join(layer_texts))[0] != doc["doc_type"]
     if not targets and not classification_uncertain:
-        store.set_document_state(conn, doc["id"], "NOT_NEEDED")
+        # Nothing needs the model. Remember whether the pages carry the stamp (so wording can be requested later
+        # without re-reading the file) and drop suggestions left over from an earlier run.
+        stamped = policy.stamp_status({n: t for n, t in enumerate(layer_texts[:sent], 1)})
+        store.set_document_state(conn, doc["id"], "NOT_NEEDED", synthetic=stamped)
+        store.replace_suggestions(conn, doc["id"], doc["application_id"], [])
         return
 
     stage("AI_EXTRACTION", "AI-assisted extraction", 47)
     if kill_switch_engaged(conn):
         return _skip(conn, job_id, doc, "kill_switch")
 
-    result = extract.extract_pdf(data)
+    with outside_write_lock(conn):  # re-reading scanned pages (OCR) is slow and needs no database
+        result = extract.extract_pdf(data)
     classification_uncertain = classification_uncertain or (ocr_path and result.detected_type != doc["doc_type"])
     pages = ground.pages_from(result)
-    sent = min(doc["pages"], cfg.max_pages)
     texts = {n: t for n, t in ground.page_texts(result).items() if n <= sent}
     ocr_pages = {n for n, p in pages.items() if p.source == "ocr"}
-    decision = policy.decide(cfg, {n: texts.get(n, "") for n in range(1, sent + 1)}, ocr_pages)
+    sent_texts = {n: texts.get(n, "") for n in range(1, sent + 1)}
+    stamped = policy.stamp_status(sent_texts, ocr_pages)           # the truth about the file, whatever the policy allows
+    decision = policy.decide(cfg, sent_texts, ocr_pages)
     if not decision.allowed:
-        return _skip(conn, job_id, doc, decision.reason or "data_policy", synthetic=False)
+        return _skip(conn, job_id, doc, decision.reason or "data_policy", synthetic=stamped)
 
     pdf_bytes = _first_pages(data, sent)
-    client = AIClient(conn, cfg)
-    provider = model = None
-    cache_hit = True
-    created = replaced = suggested = 0
-    classification: dict[str, Any] | None = None
-
+    client = AIClient(conn, cfg, unlock=outside_write_lock)
+    proposals = None
+    extract_outcome = classify_outcome = None
     if targets:
         request = ExtractRequest(doc["doc_type"], DOC_TYPES[doc["doc_type"]], fields, pdf_bytes, list(range(1, sent + 1)), texts)
-        outcome = client.extract(request, doc["sha256"], sent)
-        if outcome.result is None:
-            return _skip(conn, job_id, doc, outcome.skipped or "unavailable", synthetic=True)
-        provider, model, cache_hit = outcome.provider, outcome.model, outcome.cache_hit
-        created, replaced, suggested = _integrate(conn, doc, fields, targets, outcome.result.fields, pages, claims, model)
-
+        extract_outcome = client.extract(request, doc["sha256"], sent)
+        if extract_outcome.result is None:
+            return _skip(conn, job_id, doc, extract_outcome.skipped or "unavailable", synthetic=stamped)
+        proposals = extract_outcome.result.fields
     if classification_uncertain:
         request_c = ClassifyRequest(doc["doc_type"], dict(DOC_TYPES), pdf_bytes, list(range(1, sent + 1)), texts)
-        outcome_c = client.classify(request_c, doc["sha256"], sent)
-        if outcome_c.result is None:
-            if not targets:
-                return _skip(conn, job_id, doc, outcome_c.skipped or "unavailable", synthetic=True)
-        else:
-            provider, model = provider or outcome_c.provider, model or outcome_c.model
-            cache_hit = cache_hit and outcome_c.cache_hit
-            classification = _classification(doc, outcome_c.result, pages, outcome_c.model)
+        classify_outcome = client.classify(request_c, doc["sha256"], sent)
+        if classify_outcome.result is None and not targets:
+            return _skip(conn, job_id, doc, classify_outcome.skipped or "unavailable", synthetic=stamped)
 
-    store.set_document_state(conn, doc["id"], "RAN", synthetic=True, provider=provider, model=model, cache_hit=cache_hit,
-                             classification=classification)
-    store.audit_system(conn, "ai.extraction", "document", doc["id"],
-                       {"provider": provider, "model": model, "cache_hit": cache_hit, "claims_created": created,
-                        "claims_replaced": replaced, "suggestions": suggested, "ocr_path": ocr_path,
-                        "classified": classification is not None}, doc["application_id"])
+    outcomes = [o for o in (extract_outcome, classify_outcome) if o is not None and o.result is not None]
+    provider, model = outcomes[0].provider, outcomes[0].model
+    with store.savepoint(conn, "ai_apply"):
+        created = replaced = suggested = 0
+        classification = None
+        if proposals is not None:
+            created, replaced, suggested = _integrate(conn, doc, fields, targets, proposals, pages, claims, extract_outcome.model,
+                                                      cfg.trigger_confidence)
+        if classify_outcome is not None and classify_outcome.result is not None:
+            classification = _classification(doc, classify_outcome.result, pages, classify_outcome.model)
+        store.set_document_state(conn, doc["id"], "RAN", synthetic=stamped, provider=provider, model=model,
+                                 cache_hit=all(o.cache_hit for o in outcomes), classification=classification)
+        store.audit_system(conn, "ai.extraction", "document", doc["id"],
+                           {"provider": provider, "model": model, "cache_hit": all(o.cache_hit for o in outcomes),
+                            "claims_created": created, "claims_replaced": replaced, "suggestions": suggested,
+                            "ocr_path": ocr_path, "classified": classification is not None}, doc["application_id"])
 
 
 # ------------------------------------------------------------------------------------------- integration
 def _integrate(conn: sqlite3.Connection, doc: dict[str, Any], fields: list[FieldInfo], targets: set[str],
                proposals: dict[str, Any], pages: dict[int, ground.PageData], claims: dict[str, dict[str, Any]],
-               model: str) -> tuple[int, int, int]:
+               model: str, trigger_confidence: float = 0.80) -> tuple[int, int, int]:
     created = replaced = 0
     suggestions: list[dict[str, Any]] = []
 
@@ -192,7 +200,9 @@ def _integrate(conn: sqlite3.Connection, doc: dict[str, Any], fields: list[Field
         existing = claims.get(info.name)
         wanted = ground.canon(proposal.value, info.value_type)
         if existing and existing["confidence"] >= CONFIDENT_CLAIM:
-            if wanted != existing["value_norm"]:
+            # The claim stands. A disagreement is worth showing only if it is a plausible value of that field;
+            # free text from a model (or from an injected sentence) is not put in front of people.
+            if wanted is not None and wanted != existing["value_norm"]:
                 suggest(info, proposal, "conflicts_with_page")
             continue
         grounding = ground.ground(info.name, info.value_type, proposal.value, proposal.page, proposal.quote, pages)
@@ -202,7 +212,7 @@ def _integrate(conn: sqlite3.Connection, doc: dict[str, Any], fields: list[Field
             continue
         if existing and existing["value_norm"] is not None:
             if existing["value_norm"] != claim.value_norm:
-                if existing["confidence"] >= get_config().trigger_confidence:
+                if existing["confidence"] >= trigger_confidence:
                     suggest(info, proposal, "conflicts_with_page")
                     continue
             elif existing["confidence"] >= claim.confidence:
@@ -228,7 +238,8 @@ def _classification(doc: dict[str, Any], result: Any, pages: dict[int, ground.Pa
     ai_type = result.document_type
     mismatch = bool(ai_type and ai_type != doc["doc_type"] and result.confidence >= CLASSIFY_CONFIDENCE and located)
     return {"expected": doc["doc_type"], "ai_type": ai_type, "confidence": round(result.confidence, 3),
-            "quote": quote if located else None, "quote_found": located, "mismatch": mismatch, "model": model}
+            "quote": store.clean_text(quote, 300) if located else None, "quote_found": located, "mismatch": mismatch,
+            "model": model}
 
 
 # ---------------------------------------------------------------- document-type finding (after_rules)
@@ -236,14 +247,11 @@ def classification_sync_step(conn: sqlite3.Connection, job_id: str, app: dict[st
     """Keep one REVIEW finding per confident, quoted AI type mismatch. Never a deficiency on its own."""
     if not get_config().enabled:
         return
-    conn.execute("SAVEPOINT ai_classification")
     try:
-        _sync_classification(conn, app["id"])
+        with store.savepoint(conn, "ai_classification"):
+            _sync_classification(conn, app["id"])
     except Exception as exc:  # noqa: BLE001
-        conn.execute("ROLLBACK TO ai_classification")
         log.warning("ai_classification_sync failed type=%s", type(exc).__name__)
-    finally:
-        conn.execute("RELEASE ai_classification")
 
 
 def _sync_classification(conn: sqlite3.Connection, application_id: str) -> None:
@@ -278,14 +286,25 @@ def _sync_classification(conn: sqlite3.Connection, application_id: str) -> None:
         if row:
             conn.execute("UPDATE findings SET explanation=? WHERE id=?", (explanation, row["id"]))
             continue
+        # Reprocessing a document clears its signals, so the validation run that just finished resolved the finding.
+        # Bring that same finding back (in the state the officer had left it) instead of raising a second one.
+        revived = conn.execute("SELECT id FROM findings WHERE application_id=? AND fingerprint=? AND state='RESOLVED'"
+                               " AND resolved_by_run=? ORDER BY created_at DESC, rowid DESC LIMIT 1",
+                               (application_id, draft.fingerprint, run["id"])).fetchone()
+        if revived:
+            last = conn.execute("SELECT decision FROM reviews WHERE finding_id=? ORDER BY created_at DESC, rowid DESC LIMIT 1",
+                                (revived["id"],)).fetchone()
+            conn.execute("UPDATE findings SET state=?, resolved_at=NULL, resolved_by_run=NULL, explanation=? WHERE id=?",
+                         (_STATE_AFTER_REVIEW.get(last["decision"] if last else "", "OPEN"), explanation, revived["id"]))
+            continue
         fid = new_id("fnd")
         conn.execute(
             "INSERT INTO findings (id, application_id, run_id, fingerprint, source_kind, rule_id, title, severity, state,"
             " explanation, remedy, fix_doc_type, action_owner, proof_json, evidence_json, advisory, created_at)"
             " VALUES (?,?,?,?,?,?,?,?, 'OPEN', ?,?,?,?,?,?, 1, ?)",
-            (fid, application_id, run["id"], draft.fingerprint, draft.source_kind, None, draft.title.replace(
-                "Integrity indicator — ", ""), draft.severity, explanation, draft.remedy, draft.fix_doc_type,
-             draft.action_owner, dumps(draft.proof), dumps(draft.evidence), now_iso()))
+            (fid, application_id, run["id"], draft.fingerprint, draft.source_kind, None,
+             draft.title.replace("Integrity indicator — ", ""), draft.severity, explanation, draft.remedy,
+             draft.fix_doc_type, draft.action_owner, dumps(draft.proof), dumps(draft.evidence), now_iso()))
         audit.record(conn, None, "finding.raised", "finding", fid, {"source": "ai_classification"}, application_id)
         from ..notify import emit
         emit(conn, to_role="OFFICER", kind="OFFICER_NEEDED", title="An item needs officer review", body=draft.title,

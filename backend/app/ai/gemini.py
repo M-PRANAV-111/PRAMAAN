@@ -35,6 +35,7 @@ _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 
 class GeminiProvider:
     name = "gemini"
+    deadline_timeout: float | None = None   # set per call by the client so one request cannot outlast the call deadline
 
     def __init__(self, api_key: str, model: str, timeout: float = 45.0, max_output_tokens: int = 1500):
         self._key = api_key
@@ -81,7 +82,7 @@ class GeminiProvider:
         }
         started = time.monotonic()
         body = http.post_json(API_URL, {"x-goog-api-key": self._key, "Content-Type": "application/json"}, payload,
-                              self._timeout)
+                              min(self._timeout, self.deadline_timeout or self._timeout))
         latency = int((time.monotonic() - started) * 1000)
         text = self._output_text(body)
         try:

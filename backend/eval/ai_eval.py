@@ -202,6 +202,8 @@ def main() -> None:
     from synthetic import generator as g, hostile as h, variants as v
     from synthetic.seed import create_application, upload
 
+    import logging
+    logging.getLogger("pramaan.ai").setLevel(logging.WARNING)   # one line per call would drown the report
     bootstrap()
     keys: dict[str, str] = {}
     with transaction() as c:
@@ -246,12 +248,12 @@ def main() -> None:
         ctx.start()
 
     # ------------------------------------------------------------ A. routing confusion on the 34 bundles
-    def routing_pass(label: str) -> dict[str, Any]:
+    def routing_pass(label: str, suffix: str = "") -> dict[str, Any]:
         confusion: dict[str, Counter] = defaultdict(Counter)
         rows = []
         for n, (fault, rep) in enumerate((f, r) for f in list(benchmark.FAULTS) + benchmark.HARD_NEGATIVES for r in range(args.repeats)):
             intake = [120, 180, 240, 300, 360][n % 5]
-            pid = f"1-SYN-R{n:03d}-{rep:04d}"
+            pid = f"1-SYN-R{n:03d}-{rep:04d}{suffix}"
             inst = g.Inst(f"Routing Institute {n} (Synthetic)", pid)
             p, app_id = new_case_app(pid, intake)
             for doc_type, (fname, data) in benchmark._bundle(g, keys, inst, intake, fault).items():
@@ -287,7 +289,7 @@ def main() -> None:
         else:
             os.environ.pop("AI_PROVIDER", None)
         if ai_mode != "not_run":
-            report["routing"]["ai_on"] = routing_pass(f"AI on ({ai_mode})")
+            report["routing"]["ai_on"] = routing_pass(f"AI on ({ai_mode})", suffix="A")
     report["routing_seconds"] = round(time.perf_counter() - t0, 1)
 
     # --------------------------------------------------- B. extraction on harder variants (+ hostile documents)

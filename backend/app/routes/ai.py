@@ -9,8 +9,10 @@ from ..ai.client import build_status, set_state
 from ..api import Ctx, not_found, route
 from ..db import reader, transaction
 from ..pipeline import routing
-from ..schemas_ai import AiStatusOut, JobNoteOut, KillSwitchRequest, RoutingOut
-from .common import load_application
+from ..schemas import OkOut
+from ..schemas_ai import AiStatusOut, AiSuggestionReview, JobNoteOut, KillSwitchRequest, RoutingOut
+from ..security import REVIEWER_ROLES
+from .common import load_application, load_document
 
 
 @route("GET", "/api/v1/ai/status", summary="AI layer status: provider, models, budget, errors (never a key)", tag="ai",
@@ -48,3 +50,22 @@ def job_notes(ctx: Ctx):
             raise not_found("Job")
         load_application(c, ctx.user, j["application_id"])
         return store.job_notes(c, ctx.path["job_id"])
+
+
+@route("POST", "/api/v1/documents/{document_id}/ai-suggestions/review",
+       summary="Confirm or dismiss the open AI suggestions for one field (reason required, audited)", tag="evidence",
+       body=AiSuggestionReview, response=OkOut, roles=REVIEWER_ROLES)
+def review_ai_suggestion(ctx: Ctx):
+    body: AiSuggestionReview = ctx.body
+    with transaction() as c:
+        d, _ = load_document(c, ctx.user, ctx.path["document_id"])
+        open_rows = c.execute("SELECT 1 FROM ai_suggestions WHERE document_id=? AND field=? AND status='OPEN'",
+                              (d["id"], body.field)).fetchone()
+        if open_rows is None:
+            raise not_found("Suggestion")
+        c.execute("UPDATE ai_suggestions SET status=? WHERE document_id=? AND field=? AND status='OPEN'",
+                  ("CONFIRMED" if body.decision == "CONFIRM" else "DISMISSED", d["id"], body.field))
+        audit.record(c, ctx.user, f"ai.suggestion_{body.decision.lower()}", "document", d["id"],
+                     {"field": body.field, "reason_hash": hashlib.sha256(body.reason.encode()).hexdigest()},
+                     d["application_id"])
+    return {"ok": True}

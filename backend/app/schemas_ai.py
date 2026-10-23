@@ -70,3 +70,15 @@ class JobNoteOut(Model):
     level: Literal["INFO"]
     text: str
     created_at: str
+
+
+class AiSuggestionReview(Model):
+    """An officer's decision on an AI suggestion that could not be grounded on the page."""
+    field: str = Field(min_length=1, max_length=60)
+    decision: Literal["CONFIRM", "DISMISS"]
+    reason: str = Field(min_length=10, max_length=2000)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def trim_reason(cls, value):
+        return value.strip() if isinstance(value, str) else value
