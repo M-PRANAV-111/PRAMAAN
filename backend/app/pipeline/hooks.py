@@ -22,4 +22,5 @@ STAGE_CODES = {
     "Checking document integrity": "INTEGRITY", "Verifying with sources": "VERIFYING",
     "Evaluating rule pack": "RULES", "Re-validating affected rules": "RULES",
     "Done": "DONE", "Failed": "FAILED", "Re-queued after restart": "QUEUED",
+    "AI-assisted extraction": "AI_EXTRACTION", "Recommending next steps": "ROUTING",
 }

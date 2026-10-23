@@ -40,7 +40,7 @@ Open http://localhost:8000. Credentials are in `backend/var/demo_credentials.txt
 **6:40 Honest numbers.** Benchmark page: 26/26 planted faults, 2 of 8 look-alikes flagged and why, and the caveat that the generator and extractors were built together.
 
 ## Judge questions to expect
-- *Why not an LLM?* Non-deterministic and unauditable for regulatory findings; document text could carry prompt injection. Deterministic extraction first; a model could be a validated fallback later.
+- *Why not an LLM?* Non-deterministic and unauditable for regulatory findings; document text could carry prompt injection. Deterministic extraction first. An optional AI layer (off by default, synthetic documents only) can read difficult layouts and reword findings, but a value counts only if it is found on the page printed as that field, wording is validated against the proof, and it never decides.
 - *How would you get issuer data?* DigiLocker requester onboarding through API Setu with user consent, and AICTE-authorized interfaces. Until then the adapters are labelled mocks.
 - *What if the rules are wrong?* Every rule cites its clause, is unit-tested, needs four-eyes activation, and every run records the version — a wrong rule is traceable and reversible.
 - *Does it replace officers?* No. It cannot approve, reject or declare forgery; every adverse outcome needs an officer's recorded reason.

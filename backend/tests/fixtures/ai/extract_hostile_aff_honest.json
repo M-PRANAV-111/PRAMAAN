@@ -1,0 +1,20 @@
+{
+ "id": "interaction-test",
+ "status": "completed",
+ "model": "test",
+ "steps": [
+  {
+   "type": "model_output",
+   "content": [
+    {
+     "type": "text",
+     "text": "{\"permanent_id\": {\"value\": \"1-SYN-TEST\", \"page\": 1, \"quote\": \"Permanent Id: 1-SYN-TEST\"}, \"academic_year\": {\"value\": \"2026-27\", \"page\": 1, \"quote\": \"Academic Year: 2026-27\"}, \"total_intake\": {\"value\": \"240\", \"page\": 1, \"quote\": \"Intake proposed (seats): 240\"}, \"faculty_count\": {\"value\": \"60\", \"page\": 1, \"quote\": \"Number of Regular Faculty: 60\"}}"
+    }
+   ]
+  }
+ ],
+ "usage": {
+  "total_input_tokens": 1200,
+  "total_output_tokens": 140
+ }
+}

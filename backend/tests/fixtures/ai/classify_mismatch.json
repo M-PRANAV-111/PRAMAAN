@@ -1,0 +1,20 @@
+{
+ "id": "interaction-test",
+ "status": "completed",
+ "model": "test",
+ "steps": [
+  {
+   "type": "model_output",
+   "content": [
+    {
+     "type": "text",
+     "text": "{\"document_type\": \"affidavit\", \"confidence\": 0.93, \"evidence_quote\": \"AFFIDAVIT (FORMAT FOR EXTENSION OF APPROVAL)\"}"
+    }
+   ]
+  }
+ ],
+ "usage": {
+  "total_input_tokens": 1200,
+  "total_output_tokens": 140
+ }
+}

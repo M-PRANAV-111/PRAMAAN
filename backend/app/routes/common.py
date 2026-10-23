@@ -101,14 +101,15 @@ def finding_out(c: sqlite3.Connection, f: sqlite3.Row, p: Principal) -> dict[str
                for r in c.execute("SELECT rv.*, u.name, u.role FROM reviews rv JOIN users u ON u.id = rv.reviewer_id"
                                   " WHERE rv.finding_id = ? ORDER BY rv.created_at", (f["id"],))]
     clause_status = (proof.get("rule") or {}).get("clause", {}).get("status") if isinstance(proof.get("rule"), dict) else None
-    return {
+    from ..pipeline.explain import apply_stored  # validated AI wording when one exists; the template otherwise
+    return apply_stored(c, f, {
         "id": f["id"], "application_id": f["application_id"], "source_kind": f["source_kind"], "rule_id": f["rule_id"],
         "title": f["title"], "severity": f["severity"], "state": f["state"], "explanation": f["explanation"],
         "remedy": f["remedy"], "fix_doc_type": f["fix_doc_type"], "action_owner": f["action_owner"], "advisory": True,
         "clause_status": clause_status, "proof": proof, "evidence": evidence, "created_at": f["created_at"],
         "resolved_at": f["resolved_at"], "reviews": reviews,
         "responses": response_rows(c, f['id']),
-    }
+    })
 
 
 def response_rows(c, finding_id):
