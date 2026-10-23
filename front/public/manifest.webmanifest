@@ -1,0 +1,43 @@
+{
+  "id": "/",
+  "name": "PRAMAAN — AICTE Application Validation",
+  "short_name": "PRAMAAN",
+  "description": "AI-assisted application validation, document authentication, and regulatory compliance verification for AICTE approval applications.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "background_color": "#f2f5f0",
+  "theme_color": "#1d2b4f",
+  "orientation": "any",
+  "categories": ["government", "education", "productivity"],
+  "icons": [
+    { "src": "/assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Sign In",
+      "short_name": "Sign In",
+      "description": "Sign in to the Applicant or AICTE Officer portal",
+      "url": "/login",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Applicant Portal",
+      "short_name": "Applicant",
+      "description": "Open your institution applications and document scanner",
+      "url": "/institution",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Scrutiny Queue",
+      "short_name": "Queue",
+      "description": "Open the AICTE officer scrutiny queue",
+      "url": "/queue",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

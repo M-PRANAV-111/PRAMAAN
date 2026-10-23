@@ -50,7 +50,7 @@ export function Rules() {
         <section>
           <h2 className="mb-3 text-xl">Versions</h2>
           <ol className="grid gap-2">
-            {r.versions.map((v) => <VersionRow key={v.id} v={v} canActivate={user?.role === "ADMIN"} />)}
+            {r.versions.map((v) => <VersionRow key={v.id} v={v} canActivate={user?.role === "ADMIN"} currentAdminName={user?.name ?? null} />)}
           </ol>
         </section>
         {user?.role === "ADMIN" && <ProposeChange rules={r.rules} />}
@@ -59,9 +59,10 @@ export function Rules() {
   );
 }
 
-function VersionRow({ v, canActivate }: { v: { id: string; version: string; status: string; change_note: string; proposed_by_name: string | null; activated_by_name: string | null; created_at: string; activated_at: string | null }; canActivate: boolean }) {
+function VersionRow({ v, canActivate, currentAdminName }: { v: { id: string; version: string; status: string; change_note: string; proposed_by_name: string | null; activated_by_name: string | null; created_at: string; activated_at: string | null }; canActivate: boolean; currentAdminName: string | null }) {
   const toast = useToast();
   const [pending, setPending] = useState(false);
+  const isSelfProposed = !!currentAdminName && v.proposed_by_name === currentAdminName;
   async function activate() {
     setPending(true);
     try {
@@ -79,7 +80,13 @@ function VersionRow({ v, canActivate }: { v: { id: string; version: string; stat
         <p className="mt-1 text-ink-soft">{v.change_note}</p>
         <p className="text-xs text-ink-faint">{v.proposed_by_name ? `Proposed by ${v.proposed_by_name}` : "Installed from file"}, {fmtDate(v.created_at, true)}{v.activated_by_name ? `; activated by ${v.activated_by_name}` : ""}</p>
       </div>
-      {canActivate && v.status === "PROPOSED" && <button className="btn btn-quiet" disabled={pending} onClick={activate}>Activate</button>}
+      {canActivate && v.status === "PROPOSED" && (
+        isSelfProposed ? (
+          <span className="text-xs text-ink-soft">Another administrator must activate</span>
+        ) : (
+          <button className="btn btn-quiet" disabled={pending} onClick={activate}>Activate</button>
+        )
+      )}
     </li>
   );
 }
@@ -105,12 +112,12 @@ function ProposeChange({ rules }: { rules: RuleOut[] }) {
     } catch (err) { setError(err instanceof ApiError ? err.message : "Could not propose the change."); }
   }
   return (
-    <section>
+    <section className="min-w-0">
       <h2 className="mb-1 text-xl">Propose a parameter change</h2>
       <p className="mb-3 text-sm text-ink-soft">Creates a new version. It takes effect only when a different administrator activates it, and every run after that records the new version.</p>
-      <form onSubmit={submit} className="sheet grid gap-4 p-5">
-        <label className="field"><span>Rule</span>
-          <select className="input" value={ruleId} onChange={(e: ChangeEvent<HTMLSelectElement>) => { setRuleId(e.target.value); setParam(Object.keys(tunable.find((r) => r.id === e.target.value)?.params ?? {})[0] ?? ""); }}>
+      <form onSubmit={submit} className="sheet grid min-w-0 gap-4 p-5">
+        <label className="field min-w-0"><span>Rule</span>
+          <select className="input w-full min-w-0" value={ruleId} onChange={(e: ChangeEvent<HTMLSelectElement>) => { setRuleId(e.target.value); setParam(Object.keys(tunable.find((r) => r.id === e.target.value)?.params ?? {})[0] ?? ""); }}>
             {tunable.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
           </select></label>
         <div className="grid gap-4 sm:grid-cols-2">

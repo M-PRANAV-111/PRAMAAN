@@ -1,6 +1,6 @@
 import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError } from "../api/client";
-import { navigate, useLocation, useQueryParam } from "../lib/router";
+import { Link, navigate, useLocation, useQueryParam } from "../lib/router";
 import { homeFor, useSession } from "../lib/session";
 import { cx } from "./ui";
 
@@ -29,11 +29,13 @@ export function SignInCard({ asPage = false }: { asPage?: boolean }) {
   const { signIn } = useSession();
   const loc = useLocation();
   const expired = useQueryParam("expired");
+  const returnTo = useQueryParam("returnTo");
   const emailRef = useRef<HTMLInputElement | null>(null);
   const pwRef = useRef<HTMLInputElement | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [portal, setPortal] = useState<"applicant" | "officer">("applicant");
   const [showPw, setShowPw] = useState(false);
   const [caps, setCaps] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export function SignInCard({ asPage = false }: { asPage?: boolean }) {
     setPending(true);
     try {
       const u = await signIn(cleanEmail, password);
-      navigate(homeFor(u), { replace: true });
+      navigate(returnTo && returnTo.startsWith("/") ? returnTo : homeFor(u), { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.code === "invalid_credentials") {
         setError("Email or password is incorrect. Check both and try again.");
@@ -95,8 +97,28 @@ export function SignInCard({ asPage = false }: { asPage?: boolean }) {
       <div>
         <Heading id="signin-title" className="text-[2rem] sm:text-[2.25rem]">Sign in</Heading>
         <p className="mt-1.5 text-sm text-ink-soft">
-          Institution nodal officers and AICTE staff use the same sign-in; what you see depends on your role.
+          {portal === "applicant"
+            ? "Applicant / Institution portal — manage EoA applications, scan or upload documents, and track AI verification."
+            : "AICTE Officer / Oversight portal — inspect submitted applications, review evidence chains, and verify audit history."}
         </p>
+        <div role="group" aria-label="Select sign-in portal" className="mt-3 grid grid-cols-2 gap-1 rounded-sm bg-paper p-1 text-xs font-semibold">
+          <button
+            type="button"
+            aria-pressed={portal === "applicant"}
+            onClick={() => setPortal("applicant")}
+            className={cx("rounded-sm px-3 py-1.5 transition-colors", portal === "applicant" ? "bg-ink text-paper" : "text-ink-soft hover:text-ink")}
+          >
+            Applicant / Institution Login
+          </button>
+          <button
+            type="button"
+            aria-pressed={portal === "officer"}
+            onClick={() => setPortal("officer")}
+            className={cx("rounded-sm px-3 py-1.5 transition-colors", portal === "officer" ? "bg-ink text-paper" : "text-ink-soft hover:text-ink")}
+          >
+            AICTE Officer Login
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -167,6 +189,11 @@ export function SignInCard({ asPage = false }: { asPage?: boolean }) {
       <button type="submit" className="btn btn-primary min-h-10" disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
       </button>
+
+      <div className="flex flex-wrap justify-between gap-2 text-xs text-ink-soft">
+        <Link to="/forgot-password" className="link">Forgot password?</Link>
+        <Link to="/register" className="link font-semibold text-ink">New applicant? Register your institution</Link>
+      </div>
 
       <div className="border-t border-rule pt-3">
         <div className="text-xs font-medium text-ink-soft">Synthetic demo accounts (click to fill email)</div>

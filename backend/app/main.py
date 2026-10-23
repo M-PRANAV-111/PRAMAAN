@@ -26,7 +26,8 @@ from .routes import applications, auth, documents, oversight, system  # noqa: F4
 log = logging.getLogger("pramaan")
 
 CSP = ("default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; "
-       "font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+       "font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; "
+       "frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
 
 
 class SecurityHeaders(BaseHTTPMiddleware):
@@ -58,6 +59,13 @@ def _spa_routes(dist: Path) -> list:
     async def spa(request: Request) -> Response:
         if request.url.path.startswith("/api/"):
             return JSONResponse({"error": {"code": "not_found", "message": "Unknown API route", "details": None}}, 404)
+        if request.url.path in ("/sw.js", "/manifest.webmanifest", "/apple-touch-icon.png"):
+            f = dist / "assets" / request.url.path.lstrip("/")
+            if f.is_file():
+                media = ("application/javascript" if f.suffix == ".js"
+                         else "application/manifest+json" if f.suffix == ".webmanifest"
+                         else "image/png")
+                return FileResponse(f, media_type=media, headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
         return FileResponse(index, headers={"Cache-Control": "no-cache"})
 
     return [Mount("/assets", app=StaticFiles(directory=dist / "assets"), name="assets"),

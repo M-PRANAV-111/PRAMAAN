@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
-  api, ApiError, pageImageUrl, type ApplicationDetail, type ChecklistItemOut, type FindingOut, type RepairAction, type ReviewDecision,
+  api, ApiError, pageImageUrl, type ApplicationDetail, type ChecklistItemOut, type FindingOut, type JobOut, type RepairAction, type ReviewDecision,
   type VerificationOut,
 } from "../api/client";
 import { PageHeader } from "../components/AppShell";
 import { EvidenceViewer, type Box } from "../components/EvidenceViewer";
 import { ProofChain } from "../components/ProofChain";
+import { ProcessingJourney } from "../components/processing/ProcessingJourney";
 import { UploadSlot } from "../components/UploadSlot";
 import { Dialog, Empty, ErrorBox, Pill, SimulatedTag, Skeleton, Spinner, cx, useToast } from "../components/ui";
+import { callEndpoint, hasEndpoint, useFeatures } from "../lib/features";
 import {
   CHANNEL_LABEL, FINDING_STATE_LABEL, SEVERITY_META, STATUS_META, VERIFICATION_META, fmtBytes, fmtDate, label, plural,
 } from "../lib/format";
@@ -26,6 +28,7 @@ export function Workspace({ id }: { id: string }) {
   const [tab, setTabState] = useState<Tab>(tabParam ?? (isInstitution ? "documents" : "findings"));
   const setTab = (t: Tab) => { setTabState(t); navigate(`/applications/${id}?tab=${t}`, { replace: true }); };
   const [selected, setSelected] = useState<string | null>(null);
+  const [journeyState, setJourneyState] = useState<{ job: JobOut; docId: string | null; replacing: boolean } | null>(null);
 
   const detail = useQuery(`application:${id}`, () => api("getApplication", { path: { application_id: id } }));
   const busy = (detail.data?.active_jobs.length ?? 0) > 0;
@@ -59,7 +62,7 @@ export function Workspace({ id }: { id: string }) {
             <span className="text-sm">Rule pack v{a.rule_pack_version}</span>
           </div>
         }
-        actions={<HeaderActions a={a} isInstitution={isInstitution} />}
+        actions={<HeaderActions a={a} isInstitution={isInstitution} onJob={(job) => { setJourneyState({ job, docId: job.document_id, replacing: false }); setTab("documents"); }} />}
       />
       <div role="tablist" aria-label="Application sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-rule">
         {tabs.map(([t, l]) => (
@@ -68,15 +71,23 @@ export function Workspace({ id }: { id: string }) {
               tab === t ? "border-tape text-ink" : "border-transparent text-ink-soft hover:text-ink")}>{l}</button>
         ))}
       </div>
-      {tab === "findings" && <FindingsTab a={a} canReview={canReview && !!a.submitted_at} selected={selected} onSelect={setSelected} />}
-      {tab === "documents" && <DocumentsTab a={a} canUpload={isInstitution} />}
+      {tab === "findings" && <FindingsTab a={a} canReview={canReview && !!a.submitted_at} isInstitution={isInstitution} selected={selected} onSelect={setSelected} />}
+      {tab === "documents" && (
+        <DocumentsTab
+          a={a}
+          canUpload={isInstitution}
+          journey={journeyState ?? (a.active_jobs[0] ? { job: a.active_jobs[0], docId: a.active_jobs[0].document_id, replacing: false } : null)}
+          onJob={(job, docId, replacing) => setJourneyState({ job, docId, replacing })}
+          onOpenPlan={() => setTab("plan")}
+        />
+      )}
       {tab === "plan" && <PlanTab id={id} onOpen={(fid) => { setSelected(fid); setTab("findings"); }} />}
-      {tab === "activity" && <ActivityTab id={id} showAudit={!isInstitution} />}
+      {tab === "activity" && <ActivityTab a={a} id={id} showAudit={!isInstitution} />}
     </>
   );
 }
 
-function HeaderActions({ a, isInstitution }: { a: ApplicationDetail; isInstitution: boolean }) {
+function HeaderActions({ a, isInstitution, onJob }: { a: ApplicationDetail; isInstitution: boolean; onJob?: (job: JobOut) => void }) {
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const [pending, setPending] = useState(false);
@@ -84,11 +95,38 @@ function HeaderActions({ a, isInstitution }: { a: ApplicationDetail; isInstituti
   async function rerun() {
     setPending(true);
     try {
-      await api("validateApplication", { path: { application_id: a.id } });
+      const job = await api("validateApplication", { path: { application_id: a.id } });
+      onJob?.(job);
       invalidate(`application:${a.id}`);
       toast("Full check queued");
     } catch (e) { toast(e instanceof ApiError ? e.message : "Could not start the check", "error"); }
     finally { setPending(false); }
+  }
+  async function downloadReport() {
+    try {
+      const save = (blob: Blob, ext: string) => {
+        const aEl = document.createElement("a");
+        aEl.href = URL.createObjectURL(blob);
+        aEl.download = `PRAMAAN-report-${a.institution.aicte_permanent_id}.${ext}`;
+        aEl.click();
+        URL.revokeObjectURL(aEl.href);
+        toast("Verification report downloaded");
+      };
+      if (hasEndpoint("applicationReport")) {
+        const res = await fetch(`/api/v1/applications/${encodeURIComponent(a.id)}/report`, { credentials: "same-origin", headers: { "X-Requested-With": "pramaan" } });
+        if (res.ok) { save(await res.blob(), "pdf"); return; }
+      }
+      const lines = [
+        "PRAMAAN — PRELIMINARY VERIFICATION SUMMARY (SYNTHETIC / ADVISORY ONLY)",
+        `Institution: ${a.institution.name} (${a.institution.aicte_permanent_id}, ${a.institution.state})`,
+        `Category: ${a.category_label} · Academic Year: ${a.academic_year} · Status: ${STATUS_META[a.status].label} (Rule pack v${a.rule_pack_version})`,
+        `Documents: ${a.documents_uploaded}/${a.documents_required} · Open Findings: ${a.counts.active} (${a.counts.deficiencies} deficiencies)`,
+        ...a.checklist.map((c) => `- ${c.label}: ${c.document ? `${c.document.original_name} (${c.document.verification_status ?? "Checked"})` : "Not uploaded"}`),
+      ];
+      save(new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }), "txt");
+    } catch {
+      toast("Could not download verification report. Try again.", "error");
+    }
   }
   async function submit() {
     setPending(true);
@@ -103,6 +141,7 @@ function HeaderActions({ a, isInstitution }: { a: ApplicationDetail; isInstituti
   }
   return (
     <>
+      <button className="btn btn-quiet" onClick={downloadReport}>Download report</button>
       <button className="btn btn-quiet" onClick={rerun} disabled={pending || busy || (!isInstitution && !a.submitted_at)}>
         {busy ? <Spinner label="Checking" /> : "Run full check"}
       </button>
@@ -125,8 +164,8 @@ function HeaderActions({ a, isInstitution }: { a: ApplicationDetail; isInstituti
 }
 
 // ------------------------------------------------------------------------------------- findings
-function FindingsTab({ a, canReview, selected, onSelect }:
-  { a: ApplicationDetail; canReview: boolean; selected: string | null; onSelect: (id: string) => void }) {
+function FindingsTab({ a, canReview, isInstitution, selected, onSelect }:
+  { a: ApplicationDetail; canReview: boolean; isInstitution: boolean; selected: string | null; onSelect: (id: string) => void }) {
   const [showResolved, setShowResolved] = useState(false);
   const findings = useQuery(`findings:${a.id}:${showResolved}`, () =>
     api("listFindings", { path: { application_id: a.id }, query: { include_resolved: showResolved ? "true" : undefined } }));
@@ -192,7 +231,7 @@ function FindingsTab({ a, canReview, selected, onSelect }:
         ))}
       </div>
       <div ref={panel} className="lg:sticky lg:top-6">
-        {current && <FindingPanel key={current.id} f={current} verifications={verifs.data ?? []} canReview={canReview} />}
+        {current && <FindingPanel key={current.id} f={current} verifications={verifs.data ?? []} canReview={canReview} isInstitution={isInstitution} />}
       </div>
     </div>
   );
@@ -224,35 +263,109 @@ function preloadEvidence(f: FindingOut) {
   pumpPreload();
 }
 
-function boxesFor(f: FindingOut, docId: string, active: number): Box[] {
+function boxesFor(f: FindingOut, docId: string, active: number, forceTone?: Box["tone"]): Box[] {
   return f.evidence.flatMap((e, i) => (e.document_id === docId && e.bbox && e.page_size
     ? [{ bbox: e.bbox, pageSize: e.page_size, label: `${label(e.field)}: ${e.value ?? ""}`,
-        tone: (f.severity === "DEFICIENCY" ? "tape" : "turmeric") as Box["tone"], active: i === active }] : []));
+        tone: forceTone ?? ((f.severity === "DEFICIENCY" ? "tape" : "turmeric") as Box["tone"]), active: i === active }] : []));
 }
 
-function FindingPanel({ f, verifications, canReview }: { f: FindingOut; verifications: VerificationOut[]; canReview: boolean }) {
+function ClarificationReplyForm({ f }: { f: FindingOut }) {
+  const toast = useToast();
+  const [text, setText] = useState("");
+  const [pending, setPending] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setPending(true); setErr(null);
+    try {
+      await callEndpoint("respondFinding", { path: { finding_id: f.id }, body: { message: text.trim() } });
+      setText("");
+      invalidate(`findings:${f.application_id}`);
+      toast("Clarification reply recorded");
+    } catch (e2) {
+      setErr(e2 instanceof ApiError ? e2.message : "Could not send reply.");
+    } finally { setPending(false); }
+  }
+  return (
+    <form onSubmit={submit} className="grid gap-2.5 rounded-sm bg-paper p-3 text-sm">
+      <label className="field">
+        <span>Your reply to the scrutiny officer (10–2000 characters)</span>
+        <textarea className="input" minLength={10} maxLength={2000} required value={text}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value)} />
+      </label>
+      {err && <p role="alert" className="text-xs font-semibold text-tape">{err}</p>}
+      <button className="btn btn-primary min-h-8 justify-self-start px-3 text-xs" disabled={pending || text.trim().length < 10}>
+        {pending ? "Sending…" : "Send clarification reply"}
+      </button>
+    </form>
+  );
+}
+
+function FindingPanel({ f, verifications, canReview, isInstitution }:
+  { f: FindingOut; verifications: VerificationOut[]; canReview: boolean; isInstitution: boolean }) {
+  const { features } = useFeatures();
   const firstViewable = Math.max(0, f.evidence.findIndex((e) => e.document_id));
   const [active, setActive] = useState(firstViewable);
+  const [sideBySide, setSideBySide] = useState(false);
   const ev = f.evidence[active];
   const docId = ev?.document_id ?? null;
   const [page, setPage] = useState(ev?.page ?? 1);
   useEffect(() => { setPage(ev?.page ?? 1); }, [active, ev?.page]);
+
+  const viewableDocs = useMemo(() => {
+    const seen = new Set<string>();
+    return f.evidence.flatMap((e, idx) => {
+      if (!e.document_id || e.other_application || seen.has(e.document_id)) return [];
+      seen.add(e.document_id);
+      return [{ e, idx, docId: e.document_id }];
+    });
+  }, [f.evidence]);
+
+  const aiChecked = (f as unknown as Record<string, unknown>).explanation_source === "ai_checked";
+  const resubmissionNeeded = f.action_owner === "INSTITUTION" && !!f.fix_doc_type;
+  const decisionNode = canReview && f.state !== "RESOLVED"
+    ? <ReviewForm f={f} />
+    : isInstitution && f.state === "CLARIFICATION_REQUESTED" && features.clarifications
+    ? <ClarificationReplyForm f={f} />
+    : undefined;
+
   return (
     <article className="sheet grid gap-5 p-5 sm:p-6" aria-label={f.title}>
       <header className="grid gap-2 border-b border-rule pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <Pill tone={SEVERITY_META[f.severity].tone}>{SEVERITY_META[f.severity].label}</Pill>
           <span className="text-sm text-ink-soft">{FINDING_STATE_LABEL[f.state]}. Advisory, raised {fmtDate(f.created_at, true)}</span>
+          {aiChecked && <Pill tone="dusk">Explained by AI and checked against the evidence</Pill>}
         </div>
         <h2 className="text-xl">{f.title}</h2>
         <p className="font-serif text-ink">{f.explanation}</p>
-        <p className="text-sm"><span className="font-semibold">What would clear this: </span>{f.remedy}</p>
+        <div className="grid gap-1 text-sm sm:grid-cols-2">
+          <p><span className="font-semibold">What would clear this: </span>{f.remedy}</p>
+          <p>
+            <span className="font-semibold">Resubmission needed: </span>
+            {resubmissionNeeded ? `Yes — replace ${label(f.fix_doc_type)}` : "No — awaiting officer review or source check"}
+          </p>
+        </div>
+        {viewableDocs.length >= 2 && (
+          <div className="pt-1">
+            <button type="button" className="btn btn-quiet min-h-8 px-3 text-xs" onClick={() => setSideBySide((s) => !s)}>
+              {sideBySide ? "Single page view" : "Compare both documents side by side"}
+            </button>
+          </div>
+        )}
       </header>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <ProofChain finding={f} verifications={verifications} activeEvidence={active} onEvidence={setActive}
-          decision={canReview && f.state !== "RESOLVED" ? <ReviewForm f={f} /> : undefined} />
+        <ProofChain finding={f} verifications={verifications} activeEvidence={active} onEvidence={setActive} decision={decisionNode} />
         <div>
-          {docId ? (
+          {sideBySide && viewableDocs.length >= 2 ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {viewableDocs.slice(0, 2).map(({ e, idx, docId: dId }) => (
+                <EvidenceViewer key={dId} documentId={dId} page={e.page ?? 1}
+                  boxes={boxesFor(f, dId, idx, "tape")} maxHeight="58vh"
+                  caption={`${label(e.doc_type)}, page ${e.page ?? 1} (${label(e.field)}: ${e.value ?? ""})`} />
+              ))}
+            </div>
+          ) : docId ? (
             <EvidenceViewer documentId={docId} page={page} boxes={boxesFor(f, docId, active)} maxHeight="78vh"
               caption={ev?.other_application ? "Matched evidence from another application" : `${label(ev?.doc_type)}, page ${page}`} />
           ) : (
@@ -319,22 +432,82 @@ function ReviewForm({ f }: { f: FindingOut }) {
 }
 
 // ------------------------------------------------------------------------------------- documents
-function DocumentsTab({ a, canUpload }: { a: ApplicationDetail; canUpload: boolean }) {
+const COMMON_FLAGS: Record<string, string[]> = {
+  eoa_letter: ["Permanent ID must match AICTE records", "Issued for the previous academic cycle (2025-26)"],
+  affidavit: ["Academic year must match 2026-27", "Total intake and faculty count must match the faculty summary"],
+  fire_noc: ["Valid up to date must be on or after the start of the academic year (01-07-2026)", "Signed QR must verify against the issuer key"],
+  building_stability: ["Valid up to date must cover the academic year", "Certificate number must match the issuer registry"],
+  faculty_summary: ["Student–faculty ratio must not exceed 1:20", "Total intake must agree with the affidavit and AICTE records"],
+  infra_photo: ["Photograph must belong to this institution (checked against cross-application reuse)"],
+};
+
+function DocumentsTab({
+  a,
+  canUpload,
+  journey,
+  onJob,
+  onOpenPlan,
+}: {
+  a: ApplicationDetail;
+  canUpload: boolean;
+  journey: { job: JobOut; docId: string | null; replacing: boolean } | null;
+  onJob: (job: JobOut, docId: string | null, replacing: boolean) => void;
+  onOpenPlan: () => void;
+}) {
   const [open, setOpen] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState<Record<string, boolean>>({});
+  const toast = useToast();
+
+  async function retryValidation() {
+    try {
+      const job = await api("validateApplication", { path: { application_id: a.id } });
+      onJob(job, job.document_id, false);
+      invalidate(`application:${a.id}`);
+    } catch (e) { toast(e instanceof ApiError ? e.message : "Could not retry", "error"); }
+  }
+
   return (
     <>
+      {journey?.replacing && (
+        <p role="status" className="mb-3 rounded-sm border-l-4 border-ink bg-sheet px-3.5 py-2 text-xs font-medium text-ink">
+          Only the rules that read this document will run again.
+        </p>
+      )}
+      {journey && (
+        <ProcessingJourney
+          job={journey.job}
+          documentId={journey.docId}
+          app={a}
+          onOpenPlan={onOpenPlan}
+          onRetry={retryValidation}
+        />
+      )}
       <ul className="grid gap-3">
         {a.checklist.map((item: ChecklistItemOut) => {
           const d = item.document;
           const v = d?.verification_status ? VERIFICATION_META[d.verification_status] : null;
+          const earlier = a.documents.filter((x) => x.doc_type === item.doc_type && x.superseded);
+          const showGuide = !!guideOpen[item.doc_type];
           return (
             <li key={item.doc_type} className="sheet grid gap-3 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:items-center">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-display text-[1.4rem] leading-tight tracking-[-0.025em]">{item.label}</span>
                   <span className="text-xs text-ink-soft">{item.required ? "Required" : "Optional"}</span>
+                  <button type="button" className="link text-xs text-ink-soft"
+                    onClick={() => setGuideOpen((g) => ({ ...g, [item.doc_type]: !g[item.doc_type] }))}>
+                    {showGuide ? "Hide guidance" : "Before you upload"}
+                  </button>
                 </div>
                 <p className="text-sm text-ink-soft">{item.note}</p>
+                {showGuide && (
+                  <div className="mt-2 rounded-sm bg-paper p-2.5 text-xs">
+                    <div className="font-semibold">Common reasons this document is flagged:</div>
+                    <ul className="mt-1 grid gap-0.5 text-ink-soft">
+                      {(COMMON_FLAGS[item.doc_type] ?? [item.note]).map((f) => <li key={f}>• {f}</li>)}
+                    </ul>
+                  </div>
+                )}
                 {d && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                     <span className="max-w-full truncate font-semibold">{d.original_name}</span>
@@ -344,12 +517,18 @@ function DocumentsTab({ a, canUpload }: { a: ApplicationDetail; canUpload: boole
                     {d.detected_type && d.detected_type !== d.doc_type && <Pill tone="turmeric">Looks like {label(d.detected_type)}</Pill>}
                   </div>
                 )}
+                {earlier.length > 0 && (
+                  <div className="mt-1.5 text-xs text-ink-faint">
+                    Superseded versions ({earlier.length}): {earlier.map((e) => `${e.original_name} (${fmtDate(e.uploaded_at, true)})`).join(", ")}
+                  </div>
+                )}
               </div>
               <div className="grid gap-2">
                 {d && d.processing_state === "DONE" && (
                   <button className="btn btn-quiet justify-self-start" onClick={() => setOpen(d.id)}>View what was read</button>
                 )}
                 {canUpload && <UploadSlot applicationId={a.id} docType={item.doc_type} label={item.label} replacing={!!d}
+                  onJob={(job, docId, rep) => onJob(job, docId, rep)}
                   accept={item.doc_type === "infra_photo" ? "image/png,image/jpeg" : "application/pdf"} />}
                 {!d && !canUpload && <span className="text-sm text-ink-soft">Not uploaded.</span>}
               </div>
@@ -475,28 +654,81 @@ function PlanTab({ id, onOpen }: { id: string; onOpen: (findingId: string) => vo
 }
 
 // ------------------------------------------------------------------------------------- activity
-function ActivityTab({ id, showAudit }: { id: string; showAudit: boolean }) {
+function ActivityTab({ a, id, showAudit }: { a: ApplicationDetail; id: string; showAudit: boolean }) {
+  const { features } = useFeatures();
   const runs = useQuery(`runs:${id}`, () => api("listRuns", { path: { application_id: id } }));
   const audit = useQuery(showAudit ? `audit:${id}` : null, () => api("listAudit", { query: { application_id: id, limit: "200" } }));
+  const apiTimeline = useQuery(
+    features.timeline ? `timeline:${id}` : null,
+    () => callEndpoint<{ ts: string; title: string; detail?: string; tone?: string }[]>("applicationTimeline", { path: { application_id: id } }),
+  );
+
+  const timeline = useMemo(() => {
+    if (apiTimeline.data) return apiTimeline.data;
+    const items: { ts: string; title: string; detail: string; isDeficiency?: boolean }[] = [
+      { ts: a.created_at, title: "Application created", detail: `${a.category_label} (${a.academic_year})` },
+    ];
+    for (const d of a.documents) {
+      items.push({
+        ts: d.uploaded_at,
+        title: `${d.doc_type_label} uploaded${d.superseded ? " (superseded)" : ""}`,
+        detail: `${d.original_name} (${fmtBytes(d.size_bytes)})`,
+      });
+    }
+    for (const r of runs.data ?? []) {
+      const s = (r.summary ?? {}) as Record<string, number>;
+      items.push({
+        ts: r.started_at,
+        title: describeTrigger(r.trigger),
+        detail: `Rule pack v${r.rule_pack_version}; ${plural(r.affected_rules.length, "rule")} evaluated; ${s.created ?? 0} new, ${s.resolved ?? 0} resolved.`,
+        isDeficiency: (s.created ?? 0) > 0,
+      });
+    }
+    if (a.submitted_at) {
+      items.push({ ts: a.submitted_at, title: "Submitted to AICTE", detail: "Application entered the scrutiny queue." });
+    }
+    return items.sort((x, y) => y.ts.localeCompare(x.ts));
+  }, [a, runs.data, apiTimeline.data]);
+
   return (
     <div className="grid gap-10 lg:grid-cols-2">
-      <section>
-        <h2 className="mb-3 text-xl">Validation runs</h2>
-        {runs.error ? <ErrorBox error={runs.error} /> : !runs.data ? <Skeleton /> : (
-          <ol className="grid gap-2">
-            {runs.data.map((r) => {
-              const s = (r.summary ?? {}) as Record<string, any>;
-              return (
-                <li key={r.id} className="sheet p-4 text-sm">
-                  <div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{describeTrigger(r.trigger)}</span><span className="text-ink-soft">{fmtDate(r.started_at, true)}</span></div>
-                  <div className="mt-1 text-ink-soft">
-                    Rule pack v{r.rule_pack_version}; {plural(r.affected_rules.length, "rule")} evaluated; {s.created ?? 0} new, {s.resolved ?? 0} resolved.
+      <section className="grid content-start gap-8">
+        <div>
+          <h2 className="mb-3 text-xl">Application timeline</h2>
+          <ol className="grid gap-2 text-sm">
+            {timeline.map((item, idx) => (
+              <li key={idx} className="sheet grid grid-cols-[0.75rem_1fr] items-start gap-3 p-3.5">
+                <span aria-hidden className={cx("mt-1.5 h-2.5 w-2.5 rounded-full", (item as { isDeficiency?: boolean }).isDeficiency ? "bg-tape" : "bg-ink")} />
+                <div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="font-semibold">{item.title}</span>
+                    <span className="text-xs text-ink-soft">{fmtDate(item.ts, true)}</span>
                   </div>
-                </li>
-              );
-            })}
+                  {item.detail && <div className="mt-0.5 text-xs text-ink-soft">{item.detail}</div>}
+                </div>
+              </li>
+            ))}
           </ol>
-        )}
+        </div>
+
+        <div>
+          <h2 className="mb-3 text-xl">Validation runs</h2>
+          {runs.error ? <ErrorBox error={runs.error} /> : !runs.data ? <Skeleton /> : (
+            <ol className="grid gap-2">
+              {runs.data.map((r) => {
+                const s = (r.summary ?? {}) as Record<string, any>;
+                return (
+                  <li key={r.id} className="sheet p-4 text-sm">
+                    <div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{describeTrigger(r.trigger)}</span><span className="text-ink-soft">{fmtDate(r.started_at, true)}</span></div>
+                    <div className="mt-1 text-ink-soft">
+                      Rule pack v{r.rule_pack_version}; {plural(r.affected_rules.length, "rule")} evaluated; {s.created ?? 0} new, {s.resolved ?? 0} resolved.
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
       </section>
       {showAudit && (
         <section>

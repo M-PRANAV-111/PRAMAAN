@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { type ChangeEvent } from "react";
 import { api, type ApplicationStatus, type DashboardOut } from "../api/client";
 import { PageHeader } from "../components/AppShell";
 import { Empty, ErrorBox, Pill, Skeleton, cx } from "../components/ui";
 import { STATUS_META, VERIFICATION_META, fmtDate, plural } from "../lib/format";
 import { useQuery } from "../lib/query";
-import { Link } from "../lib/router";
+import { Link, navigate, useQueryParam } from "../lib/router";
+import { useSession } from "../lib/session";
+import { OnboardingTips } from "./Help";
 
 const ORDER: ApplicationStatus[] = ["DEFICIENCIES_FLAGGED", "MANUAL_REVIEW_REQUIRED", "PROCESSING", "READY_FOR_SCRUTINY", "DRAFT"];
 const BAR: Record<string, string> = { tape: "bg-tape", turmeric: "bg-turmeric", leaf: "bg-leaf", dusk: "bg-dusk", neutral: "bg-rule-strong" };
@@ -44,25 +46,65 @@ function Distribution({ d }: { d: DashboardOut }) {
   );
 }
 
+type SortKey = "status" | "institution" | "deficiencies" | "reviews" | "submitted";
+
 export function Queue() {
-  const [filter, setFilter] = useState<ApplicationStatus | "ALL">("ALL");
+  const { user } = useSession();
+  const filter = (useQueryParam("status") as ApplicationStatus | "ALL" | null) ?? "ALL";
+  const q = useQueryParam("q") ?? "";
+  const sort = (useQueryParam("sort") as SortKey | null) ?? "status";
+  const dir = (useQueryParam("dir") as "asc" | "desc" | null) ?? "asc";
+
+  function updateParams(patch: Record<string, string | null>) {
+    const sp = new URLSearchParams(location.search);
+    for (const [k, v] of Object.entries(patch)) {
+      if (!v || v === "ALL" || (k === "sort" && v === "status") || (k === "dir" && v === "asc")) sp.delete(k);
+      else sp.set(k, v);
+    }
+    const qs = sp.toString();
+    navigate(qs ? `/queue?${qs}` : "/queue", { replace: true });
+  }
+
+  function toggleSort(key: SortKey) {
+    if (sort === key) updateParams({ dir: dir === "asc" ? "desc" : "asc" });
+    else updateParams({ sort: key, dir: "asc" });
+  }
+
   const dash = useQuery("dashboard", () => api("dashboard"), { refetchMs: 15000 });
   const apps = useQuery("applications", () => api("listApplications"), { refetchMs: 15000 });
-  const list = (apps.data ?? []).filter((a) => filter === "ALL" || a.status === filter)
-    .sort((x, y) => ORDER.indexOf(x.status) - ORDER.indexOf(y.status) || y.counts.active - x.counts.active);
+  const needle = q.trim().toLowerCase();
+  const list = (apps.data ?? [])
+    .filter((a) => (filter === "ALL" || a.status === filter) &&
+      (!needle || a.institution.name.toLowerCase().includes(needle) || a.institution.aicte_permanent_id.toLowerCase().includes(needle) || a.institution.state.toLowerCase().includes(needle)))
+    .sort((x, y) => {
+      const mul = dir === "desc" ? -1 : 1;
+      if (sort === "institution") return mul * x.institution.name.localeCompare(y.institution.name);
+      if (sort === "deficiencies") return mul * (y.counts.deficiencies - x.counts.deficiencies);
+      if (sort === "reviews") return mul * (y.counts.reviews - x.counts.reviews);
+      if (sort === "submitted") return mul * (y.submitted_at ?? "").localeCompare(x.submitted_at ?? "");
+      return mul * (ORDER.indexOf(x.status) - ORDER.indexOf(y.status) || y.counts.active - x.counts.active);
+    });
   const counts = Object.fromEntries(ORDER.map((s) => [s, (apps.data ?? []).filter((a) => a.status === s).length]));
   return (
     <>
       <PageHeader title="Scrutiny queue" lead="Applications submitted to AICTE, with deficiencies first. Statuses are derived from findings; none of them is a decision." />
+      {user && <OnboardingTips role={user.role} />}
       {dash.data && <div className="mb-6"><Distribution d={dash.data} /></div>}
-      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filter by status">
-        {(["ALL", ...ORDER] as const).map((s) => (s === "ALL" || counts[s] > 0) && (
-          <button key={s} onClick={() => setFilter(s)} aria-pressed={filter === s}
-            className={cx("rounded-full px-3 py-1.5 text-sm font-semibold transition-colors",
-              filter === s ? "bg-ink text-paper" : "bg-sheet text-ink-soft shadow-[inset_0_0_0_1px_var(--color-rule-strong)] hover:text-ink")}>
-            {s === "ALL" ? `All (${apps.data?.length ?? 0})` : `${STATUS_META[s].label} (${counts[s]})`}
-          </button>
-        ))}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
+          {(["ALL", ...ORDER] as const).map((s) => (s === "ALL" || counts[s] > 0) && (
+            <button key={s} onClick={() => updateParams({ status: s })} aria-pressed={filter === s}
+              className={cx("rounded-full px-3 py-1.5 text-sm font-semibold transition-colors",
+                filter === s ? "bg-ink text-paper" : "bg-sheet text-ink-soft shadow-[inset_0_0_0_1px_var(--color-rule-strong)] hover:text-ink")}>
+              {s === "ALL" ? `All (${apps.data?.length ?? 0})` : `${STATUS_META[s].label} (${counts[s]})`}
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="sr-only">Search by institution name or Permanent ID</span>
+          <input type="search" className="input min-h-9 w-64 text-sm" placeholder="Search institution or Permanent ID…"
+            value={q} onChange={(e: ChangeEvent<HTMLInputElement>) => updateParams({ q: e.target.value })} />
+        </label>
       </div>
       {apps.error ? <ErrorBox error={apps.error} retry={apps.refetch} /> : !apps.data ? <Skeleton rows={4} /> : list.length === 0 ? (
         <Empty title="No applications here">Applications appear once an institution submits them.</Empty>
@@ -71,12 +113,12 @@ export function Queue() {
           <table className="w-full min-w-[46rem] text-sm">
             <thead>
               <tr className="border-b border-rule text-left text-ink-soft">
-                <th className="px-4 py-3 font-semibold">Institution</th>
+                <th className="px-4 py-3 font-semibold"><button type="button" className="hover:text-ink" onClick={() => toggleSort("institution")}>Institution</button></th>
                 <th className="px-4 py-3 font-semibold">Category</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 text-right font-semibold">Deficiencies</th>
-                <th className="px-4 py-3 text-right font-semibold">For review</th>
-                <th className="px-4 py-3 font-semibold">Submitted</th>
+                <th className="px-4 py-3 font-semibold"><button type="button" className="hover:text-ink" onClick={() => toggleSort("status")}>Status</button></th>
+                <th className="px-4 py-3 text-right font-semibold"><button type="button" className="hover:text-ink" onClick={() => toggleSort("deficiencies")}>Deficiencies</button></th>
+                <th className="px-4 py-3 text-right font-semibold"><button type="button" className="hover:text-ink" onClick={() => toggleSort("reviews")}>For review</button></th>
+                <th className="px-4 py-3 font-semibold"><button type="button" className="hover:text-ink" onClick={() => toggleSort("submitted")}>Submitted</button></th>
               </tr>
             </thead>
             <tbody>
@@ -87,7 +129,12 @@ export function Queue() {
                     <div className="text-xs text-ink-soft">{a.institution.aicte_permanent_id}, {a.institution.state}</div>
                   </td>
                   <td className="px-4 py-3">{a.category_label}<div className="text-xs text-ink-soft">{a.academic_year}</div></td>
-                  <td className="px-4 py-3"><Pill tone={STATUS_META[a.status].tone}>{STATUS_META[a.status].label}</Pill></td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Pill tone={STATUS_META[a.status].tone}>{STATUS_META[a.status].label}</Pill>
+                      {a.counts.active === 0 && <span className="text-xs text-ink-soft">No open findings</span>}
+                    </div>
+                  </td>
                   <td className={cx("px-4 py-3 text-right font-semibold", a.counts.deficiencies ? "text-tape" : "text-ink-faint")}>{a.counts.deficiencies}</td>
                   <td className={cx("px-4 py-3 text-right font-semibold", a.counts.reviews ? "text-turmeric" : "text-ink-faint")}>{a.counts.reviews}</td>
                   <td className="px-4 py-3 text-ink-soft">{fmtDate(a.submitted_at)}</td>

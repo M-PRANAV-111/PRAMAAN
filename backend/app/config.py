@@ -15,7 +15,7 @@ class Settings(BaseModel):
     data_dir: Path = BACKEND_DIR / "var"
     database_path: Path | None = None
     rulepack_dir: Path = BACKEND_DIR / "rulepacks"
-    front_dist: Path | None = BACKEND_DIR.parent / "front" / "dist"
+    front_dist: Path | None = None
     jwt_secret: str = "dev-only-insecure-secret-change-me-0123456789"
     jwt_ttl_minutes: int = 30
     cookie_secure: bool = False

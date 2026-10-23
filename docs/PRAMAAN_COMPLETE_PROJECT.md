@@ -479,13 +479,15 @@ Layout language borrowed from **FORMAT** by Obys (format.obys.agency, Awwwards S
 | Screen | What it shows |
 |---|---|
 | Start page (`/`) | Scroll-driven 9-chapter journey of one synthetic fire safety NOC (`FNOC/SYN/2024/3310`), side-by-side institution and officer workspace previews (`#product`), six verification statuses, role permissions, honest prototype limits, hash-chained audit and four-eyes governance (`#trust`), and final CTA with red-tape proof ribbon |
-| Sign in (`SignInDialog` & `/login`) | Accessible modal `<dialog>` from any start-page Sign in control plus standalone `/login` page; one sign-in for all roles with nine demo-account chips |
-| Institution applications | Applications with status, document progress and open findings; start an application |
-| Application workspace | Tabs: Findings (list plus proof chain and page viewer zoomed to the value), Documents (checklist, uploads with live stages, "view what was read"), What to fix (repair plan), Activity (runs and audit) |
-| Scrutiny queue | Submitted applications, deficiencies first, verification mix, filters |
-| Rule pack | Every rule with kind, documents read, clause and its status, parameters; versions; proposal form for admins |
-| Audit trail | Events and one-click chain verification |
-| Benchmark | Measured synthetic results, false alarms, caveats |
+| Sign in (`SignInDialog` & `/login`) | Accessible modal `<dialog>` from any start-page Sign in control plus standalone `/login` page; one sign-in for all roles with nine demo-account chips, `returnTo` route restoration, and contract-gated registration/password-reset links |
+| Institution applications (`/institution`) | 4-metric summary row, per-application readiness bar, "Next step" guidance, category checklist preview (`6 items`), and dismissible first-visit onboarding tips |
+| Application workspace (`/applications/:id`) | Tabs: Findings (8-question proof chain, side-by-side `EvidenceViewer` comparison on cross-document findings, AI-checked evidence notes, officer review / institution clarification replies), Documents (6-stage in-app `ProcessingJourney` state machine, "Before you upload" guidance, superseded version history, `DocumentDialog`), What to fix (grouped repair plan), Activity (ordered application timeline, validation runs, and audit trail) |
+| Scrutiny queue (`/queue`) | Submitted applications, deficiencies first, verification mix, URL-persisted search (`?q=`), status filter (`?status=`), sortable columns (`?sort=&dir=`), and "No open findings" indicator on clean cases |
+| Rule pack (`/rules`) | Every rule with kind, documents read, clause and its status, parameters; versions; proposal form for admins (with self-activation guard) |
+| Audit trail (`/audit`) | Events and one-click chain verification |
+| Benchmark (`/benchmark`) | Measured synthetic results, false alarms, caveats |
+| Help & role guide (`/help`) | Per-role workflow guides, onboarding tips reset, six verification statuses with code and meaning, and four explicit prototype boundaries |
+| Account & admin (`/account`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/accept-invitation`, `/admin/registrations`, `/admin/users`, `/admin/system`, `/notifications`) | Contract-gated account, registration (Accept/Decline with reason), user invitation, system/AI readiness, and notification views |
 
 Screenshots: `docs/screenshots/`.
 
@@ -515,18 +517,23 @@ Screenshots: `docs/screenshots/`.
 
 ## 16. Testing and measured results
 
-### 16.1 Test suites (run 22 Oct 2026)
+### 16.1 Test suites (run 23 Oct 2026)
 
 | Suite | Covers | Result |
 |---|---|---|
 | Backend unit (`tests/test_units.py`) | Expression whitelist; every rule type and outcome; reprint dates; abstention; conflict proofs; verification mapping; unsafe pack rejected; audit tamper and deletion; planner grouping; upload checks; overlay-edit detection; incremental-save indicator; OCR provenance; no adverse vocabulary | 20/20 |
 | Backend end-to-end (`tests/test_api.py`) | Real server on a seeded database: login, cookies, CSRF, cross-tenant 404, roles, headers, clean and look-alike bundles, planted defects with evidence, ladder statuses and simulated flags, duplicate redaction, full institution→officer loop with targeted re-validation, upload rejections, four-eyes activation, audit tamper detection | 14/14 |
 | Contract drift | Generated contract matches code | Pass (27 operations, 37 schemas) |
-| Web type-check and build | Strict TypeScript (`npm run typecheck` and `npm run typecheck:offline`); esbuild code-split + `<link rel="modulepreload">` + minified Tailwind v4 | Pass (330.4 KB signed-in JS, 43.1 KB start-page chunk, 46.1 KB CSS; first-frame doc visible 1062.2 ms → 840.1 ms at 40 ms RTT) |
-| Start-page journey & flow checks (`front/e2e/journey_check.py`) | Desktop (1440×900), laptop (1280×720), phone (390×844), reduced motion: exact scroll reversibility, scenes 0→8 order, no horizontal overflow, stage release, pointer-events pass-through, resize stability, medium scroll length (≤ 11 screens desktop/laptop, ≤ 14 phone), strong document stage presence, mouse-wheel glide flow (475/491 moving frames, 4 stop-starts, 21.4 px p95 step), dialog focus trap, p95 frame time 16.7 ms (< 20 ms), 0 long tasks > 50 ms | 48/48 |
+| Web type-check and build | Strict TypeScript (`npm run typecheck` and `npm run typecheck:offline`); esbuild code-split + `<link rel="modulepreload">` + minified Tailwind v4 | Pass (334.8 KB signed-in JS, 43.2 KB start-page chunk, 48.9 KB CSS — all within budgets) |
+| Start-page journey & flow checks (`front/e2e/journey_check.py`) | Desktop (1440×900), laptop (1280×720), phone (390×844), reduced motion: exact scroll reversibility, scenes 0→8 order, no horizontal overflow, stage release, pointer-events pass-through, resize stability, medium scroll length (≤ 11 screens desktop/laptop, ≤ 14 phone), strong document stage presence, mouse-wheel glide flow, dialog focus trap, frame budget | 48/48 |
 | Page length & document size (`front/e2e/measure_page.py`) | Whole-page screens, story screens and document width across 1440×900, 1280×720, 1024×768, 390×844 and 360×740 | Pass (10.3 / 10.8 / 10.8 / 13.9 / 15.8 screens; 461 / 374 / 328 / 195 / 180 px doc width) |
-| Sign-in accessibility & flow (`front/e2e/signin_check.py`) | Skip links, modal `<dialog>` open/close, empty/invalid field errors with `aria-describedby`, demo chips, show/hide password, Caps Lock hint, wrong-password alert, officer & institution sign-in, `/login?expired=1`, mobile 390 px | 27/27 |
+| Sign-in accessibility & flow (`front/e2e/signin_check.py`) | Skip links, modal `<dialog>` open/close, empty/invalid field errors with `aria-describedby`, demo chips, show/hide password, Caps Lock hint, wrong-password alert, officer & institution sign-in, `/login?expired=1`, mobile 390 px, `forced-colors: active` | 28/28 |
 | Browser walkthrough (`front/e2e/walkthrough.py`) | Officer and institution flows end to end, plus mobile landing | Pass |
+| Route & viewport inventory (`front/e2e/inventory_check.py`) | Every route and workspace tab across `public`, `INSTITUTION`, `OFFICER`, `ADMIN`, and `AUDITOR` at 1440×900 and 390×844; zero horizontal overflow and zero unexpected errors | 93/93 |
+| Accounts, i18n & feature gating (`front/e2e/accounts_check.py`) | Protected-route `returnTo` restoration, English/Hindi `<html lang>` toggle, `/help` guides and 6 statuses, contract-first feature gating against `/api/v1/meta`, and `AUDITOR` oversight routing | 12/12 |
+| In-app processing journey (`front/e2e/processing_check.py`) | 6-stage `ProcessingJourney` state machine, `StageRail`, real page 1 image, extracted claim bounding boxes, `OutcomeCard` routing copy (no adverse vocabulary), targeted re-validation notice, and `prefers-reduced-motion: reduce` static mode | 9/9 |
+| Tracking, queue & proof chain (`front/e2e/tracking_check.py`) | Institution summary row, readiness progress bar, "Next step" line, category checklist preview, "Before you upload" guidance, application timeline, URL-persisted queue search/filter/sort, "No open findings" on clean cases, 8-question ProofChain header, and side-by-side `EvidenceViewer` comparison | 16/16 |
+| Accessibility (`front/e2e/a11y_check.py`) | `Skip to content` first Tab stop on signed-in screens, `<main id="main">` landmarks, explicit `<label>` associations on all form inputs, native `<dialog>` open/Escape close, and `forced-colors: active` borders | 10/10 |
 
 ### 16.2 Synthetic benchmark (`python -m eval.benchmark`)
 34 bundles: 13 planted-fault types × 2 and 4 valid look-alike types × 2, through the real pipeline.

@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
 import { api, ApiError, uploadDocument, type JobOut } from "../api/client";
 import { invalidate } from "../lib/query";
+import { CameraScanner } from "./CameraScanner";
 import { cx, useToast } from "./ui";
 
 type State =
@@ -11,10 +12,11 @@ type State =
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function UploadSlot({ applicationId, docType, label, accept, replacing }:
-  { applicationId: string; docType: string; label: string; accept: string; replacing: boolean }) {
+export function UploadSlot({ applicationId, docType, label, accept, replacing, onJob }:
+  { applicationId: string; docType: string; label: string; accept: string; replacing: boolean; onJob?: (job: JobOut, docId: string, replacing: boolean) => void }) {
   const [state, setState] = useState<State>({ kind: "idle" });
   const [over, setOver] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const input = useRef<HTMLInputElement | null>(null);
   const toast = useToast();
 
@@ -23,6 +25,7 @@ export function UploadSlot({ applicationId, docType, label, accept, replacing }:
     try {
       const res = await uploadDocument(applicationId, docType, file, (f) => setState({ kind: "uploading", fraction: f, name: file.name }));
       let job = res.job;
+      onJob?.(job, res.document.id, replacing);
       invalidate(`application:${applicationId}`);
       while (job.state === "QUEUED" || job.state === "RUNNING") {
         setState({ kind: "processing", job, name: file.name });
@@ -59,8 +62,13 @@ export function UploadSlot({ applicationId, docType, label, accept, replacing }:
       {state.kind === "idle" && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <label htmlFor={`up-${docType}`} className="btn btn-quiet min-h-9 cursor-pointer px-3">{replacing ? "Replace file" : "Choose file"}</label>
+          <button type="button" className="btn btn-quiet min-h-9 px-3" onClick={() => setScanning(true)}>Scan document</button>
           <span className="text-ink-soft">or drop it here. {accept.includes("pdf") ? "PDF" : "PNG or JPEG"}, up to 10 MB.</span>
         </div>
+      )}
+      {scanning && (
+        <CameraScanner open={scanning} docType={docType} label={label} accept={accept}
+          onClose={() => setScanning(false)} onSubmitFile={(f) => void send(f)} />
       )}
       {busy && (
         <div className="grid gap-1.5 text-sm" aria-live="polite">

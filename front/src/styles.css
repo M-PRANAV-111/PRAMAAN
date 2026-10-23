@@ -239,6 +239,8 @@
 
   @media (max-width: 1023px) {
     .journey { --doc-w: clamp(160px, min(50vw, 30svh), 260px); }
+    .journey-stage { z-index: 2; }
+    .journey-stage::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 43svh; background: var(--color-paper); box-shadow: 0 1px 0 var(--color-ink); }
     .journey-scenes { padding-inline: 1rem; }
     .journey-scene-open { min-height: 0; display: block; padding-top: 44svh; }
     .journey-scene-std { min-height: 0; padding: 44svh 0 6svh; }

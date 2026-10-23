@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { ApiError } from "../api/client";
 import { TONE_CLASS } from "../lib/format";
 
@@ -44,7 +44,9 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 }
 
 export function ErrorBox({ error, retry }: { error: unknown; retry?: () => void }) {
-  const message = error instanceof ApiError ? error.message : "Something went wrong while loading this page.";
+  const message = error instanceof ApiError
+    ? (error.status === 429 ? "Too many requests in a short time. Wait a moment and try again." : error.message)
+    : "Something went wrong while loading this page.";
   return (
     <div role="alert" className="flex flex-wrap items-center gap-3 rounded-sm border-l-4 border-tape bg-tape-wash px-4 py-3 text-sm">
       <span className="font-semibold text-tape">{message}</span>
@@ -91,24 +93,25 @@ export const useToast = () => useContext(ToastCtx);
 
 // ---------------------------------------------------------------- dialog
 export function Dialog({ open, onClose, title, children, wide }: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
+  const ref = useRef<HTMLDialogElement | null>(null);
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = ""; };
-  }, [open, onClose]);
+    const el = ref.current;
+    if (!el) return;
+    if (open && !el.open) el.showModal();
+    else if (!open && el.open) el.close();
+  }, [open]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-ink/40 px-3 py-6 sm:py-12" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label={title} onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
-        className={cx("sheet w-full animate-rise", wide ? "max-w-5xl" : "max-w-lg")}>
+    <dialog ref={ref} onClose={onClose} aria-label={title}
+      onClick={(e: MouseEvent<HTMLDialogElement>) => { if (e.target === e.currentTarget) onClose(); }}
+      className={cx("sheet m-auto w-full animate-rise p-0 text-ink backdrop:bg-ink/40", wide ? "max-w-5xl" : "max-w-lg")}>
+      <div onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-4 border-b border-rule px-5 py-3">
           <h2 className="text-lg">{title}</h2>
-          <button className="btn btn-quiet min-h-9 px-3" onClick={onClose} autoFocus>Close</button>
+          <button type="button" className="btn btn-quiet min-h-9 px-3" onClick={onClose} autoFocus>Close</button>
         </div>
         <div className="p-5">{children}</div>
       </div>
-    </div>
+    </dialog>
   );
 }

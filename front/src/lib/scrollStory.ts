@@ -141,10 +141,14 @@ export function createScrollStory(opts: {
   let scene = -1;
   let settled: boolean | null = null;
   let alive = true;
+  let measuredVh = 0;
+  let lastWidth = 0;
 
   function measure() {
     const y = window.scrollY;
     const vh = window.innerHeight;
+    measuredVh = vh;
+    lastWidth = window.innerWidth;
     const line = vh * anchor;
     starts = opts.scenes.map((s) => s.getBoundingClientRect().top + y);
     const end = starts[n - 1] + opts.scenes[n - 1].offsetHeight;
@@ -155,7 +159,7 @@ export function createScrollStory(opts: {
   }
 
   function timeAt(y: number) {
-    const line = y + window.innerHeight * anchor;
+    const line = y + (measuredVh || window.innerHeight) * anchor;
     if (line <= starts[0]) return 0;
     for (let i = 0; i < n; i++) {
       if (line < starts[i + 1]) return i + (line - starts[i]) / (starts[i + 1] - starts[i]);
@@ -222,10 +226,17 @@ export function createScrollStory(opts: {
     schedule();
   };
 
+  const onResize = () => {
+    if (window.innerWidth !== lastWidth || Math.abs(window.innerHeight - measuredVh) > 120) refresh();
+    else schedule();
+  };
+
   const ro = new ResizeObserver(refresh);
   opts.scenes.forEach((s) => ro.observe(s));
   window.addEventListener("scroll", schedule, { passive: true });
-  window.addEventListener("resize", refresh);
+  window.addEventListener("touchmove", schedule, { passive: true });
+  window.addEventListener("resize", onResize, { passive: true });
+  window.addEventListener("orientationchange", refresh);
   document.fonts?.ready.then(refresh).catch(() => {});
   measure();
   render(performance.now());
@@ -238,7 +249,9 @@ export function createScrollStory(opts: {
       cancelAnimationFrame(frame);
       ro.disconnect();
       window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", refresh);
+      window.removeEventListener("touchmove", schedule);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", refresh);
     },
   };
 }

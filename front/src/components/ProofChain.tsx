@@ -90,6 +90,7 @@ export function ProofChain({ finding, verifications, activeEvidence, onEvidence,
   const rule = p.rule as Obj | undefined;
   const docs = new Set(finding.evidence.map((e) => e.document_id).filter(Boolean));
   const attempts = verifications.filter((v) => docs.has(v.document_id));
+  const aiSuggestions = ((finding as Obj).ai_suggestions ?? p.ai_suggestions ?? []) as { field?: string; value?: string }[];
   return (
     <ol key={finding.id} className="grid animate-fade" aria-label="Proof chain for this finding">
       <Link_ step={1} title={rule ? "Rule applied" : "Check applied"}>
@@ -120,9 +121,20 @@ export function ProofChain({ finding, verifications, activeEvidence, onEvidence,
                   <span className="block text-xs text-ink-soft">
                     {e.other_application ? "Another institution's application" : label(e.doc_type)}
                     {e.page ? `, page ${e.page}` : ""}
-                    {typeof e.confidence === "number" ? `, ${e.extractor?.startsWith("ocr") ? "OCR" : "text layer"} ${Math.round(e.confidence * 100)}%` : ""}
+                    {typeof e.confidence === "number"
+                      ? `, ${e.extractor?.startsWith("ai+") ? `AI + ${e.extractor.slice(3)}` : e.extractor?.startsWith("ocr") ? "OCR" : "text layer"} ${Math.round(e.confidence * 100)}%`
+                      : ""}
                   </span>
                 </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {aiSuggestions.length > 0 && (
+          <ul className="mt-2 grid gap-1 text-xs text-ink-soft">
+            {aiSuggestions.map((s, idx) => (
+              <li key={idx} className="rounded-sm bg-paper px-2.5 py-1">
+                {label(s.field)}: {s.value ?? "—"} — <span className="font-semibold">AI suggestion — not found on the page, not used</span>
               </li>
             ))}
           </ul>
@@ -157,7 +169,18 @@ export function ProofChain({ finding, verifications, activeEvidence, onEvidence,
             ))}
           </ul>
         )}
-        {decision ?? (finding.reviews.length === 0 && <p className="text-ink-soft">Awaiting an officer. PRAMAAN only flags; it does not decide.</p>)}
+        {Array.isArray((finding as Obj).responses) && ((finding as Obj).responses as Obj[]).length > 0 && (
+          <ul className="mb-3 grid gap-2">
+            {((finding as Obj).responses as Obj[]).map((resp, idx) => (
+              <li key={resp.id ?? idx} className="rounded-sm border-l-2 border-ink bg-paper px-3 py-2 text-xs">
+                <div className="font-semibold">Institution reply</div>
+                <p className="mt-0.5 font-serif text-sm">{String(resp.message ?? resp.text ?? "")}</p>
+                <div className="mt-0.5 text-ink-soft">{fmtDate(String(resp.created_at ?? ""), true)}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {decision ?? (finding.reviews.length === 0 && <p className="text-ink-soft">Waiting for an officer. PRAMAAN only flags; it does not decide.</p>)}
       </Link_>
     </ol>
   );

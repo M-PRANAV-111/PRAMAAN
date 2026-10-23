@@ -12,6 +12,10 @@ import { prefetch } from "./lib/query";
 import { Link, match, navigate, registerPrefetch, useLocation } from "./lib/router";
 import { SessionProvider, homeFor, useSession } from "./lib/session";
 
+import { AdminRegistrationsPage, AdminSystemPage, AdminUsersPage, NotificationsPage } from "./pages/AdminPages";
+import { AcceptInvitationPage, AccountPage, ForgotPasswordPage, RegisterPage, ResetPasswordPage, VerifyEmailPage } from "./pages/AuthPages";
+import { Help } from "./pages/Help";
+
 // The start page carries the scroll story; load it as its own chunk so signed-in screens never download it.
 const Landing = lazy(() => import("./pages/Landing").then((m) => ({ default: m.Landing })));
 
@@ -26,6 +30,12 @@ const ROUTES: { pattern: string; roles: Role[]; title: string; render: (p: Recor
   { pattern: "/rules", roles: ALL, title: "Rule pack", render: () => <Rules /> },
   { pattern: "/audit", roles: OVERSIGHT, title: "Audit trail", render: () => <AuditPage /> },
   { pattern: "/benchmark", roles: OVERSIGHT, title: "Benchmark", render: () => <Benchmark /> },
+  { pattern: "/help", roles: ALL, title: "Help", render: () => <Help /> },
+  { pattern: "/account", roles: ALL, title: "Account", render: () => <AccountPage /> },
+  { pattern: "/notifications", roles: ALL, title: "Notifications", render: () => <NotificationsPage /> },
+  { pattern: "/admin/registrations", roles: ["ADMIN"], title: "Registrations", render: () => <AdminRegistrationsPage /> },
+  { pattern: "/admin/users", roles: ["ADMIN"], title: "Users", render: () => <AdminUsersPage /> },
+  { pattern: "/admin/system", roles: ["ADMIN"], title: "System", render: () => <AdminSystemPage /> },
 ];
 
 // Warm the next page's data when a link is hovered, focused or touched, so navigation feels instant.
@@ -53,12 +63,18 @@ function Router() {
     document.title = route ? `${route.r.title} — PRAMAAN` : path === "/login" ? "Sign in — PRAMAAN" : "PRAMAAN — evidence-linked application validation";
   }, [route, path]);
   useEffect(() => {
-    if (ready && route && !user) navigate(`/login`, { replace: true });
+    if (ready && route && !user && path !== "/help") navigate(`/login?returnTo=${encodeURIComponent(loc)}`, { replace: true });
     if (ready && path === "/app" && user) navigate(homeFor(user), { replace: true });
-  }, [ready, route, user, path]);
+  }, [ready, route, user, path, loc]);
 
   if (path === "/") return <Suspense fallback={<div className="min-h-dvh" />}><Landing /></Suspense>;
   if (path === "/login") return <Login />;
+  if (path === "/help" && !user) return <main id="main" className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6"><Help /></main>;
+  if (path === "/register") return <RegisterPage />;
+  if (path === "/verify-email") return <VerifyEmailPage />;
+  if (path === "/forgot-password") return <ForgotPasswordPage />;
+  if (path === "/reset-password") return <ResetPasswordPage />;
+  if (path === "/accept-invitation") return <AcceptInvitationPage />;
   if (!ready) return <div className="p-8"><Skeleton /></div>;
   if (!route || !user) {
     return (
