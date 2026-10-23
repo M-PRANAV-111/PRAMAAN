@@ -76,7 +76,7 @@ class RouteSpec:
     response: Any
     status: int
     multipart: bool
-    raw: bool
+    raw: bool | str
     query: dict[str, str]
 
 
@@ -85,7 +85,7 @@ REGISTRY: list[RouteSpec] = []
 
 def route(method: str, path: str, *, summary: str, tag: str, response: Any = None, body: type[BaseModel] | None = None,
           roles: tuple[str, ...] | None = None, public: bool = False, status: int = 200, multipart: bool = False,
-          raw: bool = False, query: dict[str, str] | None = None) -> Callable[[Callable[[Ctx], Any]], Callable[[Ctx], Any]]:
+          raw: bool | str = False, query: dict[str, str] | None = None) -> Callable[[Callable[[Ctx], Any]], Callable[[Ctx], Any]]:
     def deco(fn: Callable[[Ctx], Any]) -> Callable[[Ctx], Any]:
         REGISTRY.append(RouteSpec(method, path, fn, summary, tag, roles, public, body, response, status, multipart, raw,
                                   query or {}))

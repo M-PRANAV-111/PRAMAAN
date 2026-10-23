@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 Role = Literal["INSTITUTION", "OFFICER", "ADMIN", "AUDITOR"]
 Category = Literal["EOA_EXISTING", "EOA_INTAKE_INCREASE"]
@@ -23,6 +23,8 @@ ReviewDecision = Literal["CONFIRM", "DISMISS", "ESCALATE", "REQUEST_CLARIFICATIO
 JobState = Literal["QUEUED", "RUNNING", "DONE", "FAILED"]
 ProcessingState = Literal["QUEUED", "PROCESSING", "DONE", "FAILED"]
 ActionOwner = Literal["INSTITUTION", "OFFICER"]
+StageCode = Literal["QUEUED", "READING", "FINGERPRINTING", "EXTRACTING_TEXT", "EXTRACTING_FIELDS",
+                    "AI_EXTRACTION", "INTEGRITY", "VERIFYING", "RULES", "ROUTING", "DONE", "FAILED"]
 
 
 class Model(BaseModel):
@@ -66,6 +68,8 @@ class FindingCounts(Model):
 
 
 class JobOut(Model):
+    stage_code: StageCode | None = None
+    error_message: str | None = None
     id: str
     kind: Literal["PROCESS_DOCUMENT", "VALIDATE"]
     state: JobState
@@ -107,6 +111,7 @@ class ApplicationSummary(Model):
 
 
 class DocumentOut(Model):
+    version: int = 1
     id: str
     doc_type: DocType
     doc_type_label: str
@@ -172,7 +177,16 @@ class VerificationOut(Model):
     created_at: str
 
 
+class AiSuggestionOut(Model):
+    field: str
+    value: str
+    page: int | None = None
+    reason: Literal["not_found_on_page", "conflicts_with_page", "low_confidence"]
+    model: str
+
+
 class DocumentEvidence(Model):
+    ai_suggestions: list[AiSuggestionOut] = Field(default_factory=list)
     document: DocumentOut
     claims: list[ClaimOut]
     verifications: list[VerificationOut]
@@ -207,7 +221,18 @@ class ReviewOut(Model):
     created_at: str
 
 
+class ResponseOut(Model):
+    id: str
+    author_name: str
+    text: str
+    document_id: str | None = None
+    created_at: str
+
+
 class FindingOut(Model):
+    responses: list[ResponseOut] = Field(default_factory=list)
+    explanation_source: Literal["template", "ai_checked"] = "template"
+    ai_assisted: bool = False
     id: str
     application_id: str
     source_kind: FindingSource
@@ -354,6 +379,7 @@ class DashboardOut(Model):
 
 
 class MetaOut(Model):
+    features: dict[str, bool] = Field(default_factory=dict)
     doc_types: dict[str, str]
     categories: dict[str, str]
     application_statuses: list[str]
@@ -380,3 +406,182 @@ class ErrorOut(Model):
 
 class OkOut(Model):
     ok: Literal[True] = True
+
+
+# ---------------------------------------------------------------- accounts, tracking and administration
+class AcceptedOut(OkOut):
+    message: str
+
+
+class EmailRequest(Model):
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value):
+        return value.strip().lower() if isinstance(value, str) else value
+
+
+class InstitutionRegistration(Model):
+    aicte_permanent_id: str = Field(min_length=3, max_length=80, pattern=r"^[A-Za-z0-9-]+$")
+    name: str = Field(min_length=2, max_length=240)
+    state: str = Field(min_length=2, max_length=100)
+    trust_name: str = Field(min_length=2, max_length=240)
+
+
+class RegisterRequest(EmailRequest):
+    name: str = Field(min_length=2, max_length=120)
+    password: str = Field(min_length=12, max_length=200)
+    phone: str | None = Field(default=None, max_length=40)
+    institution: InstitutionRegistration
+    accept_terms: Literal[True]
+
+
+class TokenRequest(Model):
+    token: str = Field(min_length=20, max_length=200)
+
+
+class AcceptInvitationRequest(TokenRequest):
+    password: str = Field(min_length=12, max_length=200)
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+
+
+class PasswordResetRequest(TokenRequest):
+    new_password: str = Field(min_length=12, max_length=200)
+
+
+class PasswordChangeRequest(Model):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=12, max_length=200)
+
+
+class InstitutionDetailOut(InstitutionOut):
+    trust_name: str
+    status: str
+    contact_email: str | None = None
+    address: str | None = None
+
+
+class AccountOut(Model):
+    user: UserOut
+    email_verified: bool
+    phone: str | None = None
+    created_at: str
+    last_login_at: str | None = None
+    institution: InstitutionDetailOut | None = None
+
+
+class AccountUpdate(Model):
+    name: str | None = Field(default=None, min_length=2, max_length=120)
+    phone: str | None = Field(default=None, max_length=40)
+    address: str | None = Field(default=None, max_length=1000)
+    contact_email: str | None = Field(default=None, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class SessionInfoOut(Model):
+    id: str
+    created_at: str
+    last_seen_at: str
+    user_agent: str
+    ip_hint: str
+    current: bool
+
+
+class NotificationOut(Model):
+    id: str
+    kind: str
+    title: str
+    body: str
+    link: str
+    application_id: str | None = None
+    finding_id: str | None = None
+    created_at: str
+    read_at: str | None = None
+
+
+class CountOut(Model):
+    count: int
+
+
+class TimelineEventOut(Model):
+    id: str
+    at: str
+    kind: str
+    title: str
+    detail: str
+    actor_name: str | None = None
+    actor_role: str | None = None
+    link: str | None = None
+
+
+class ResponseRequest(Model):
+    text: str = Field(min_length=10, max_length=2000)
+    document_id: str | None = None
+
+    @field_validator("text", mode="before")
+    @classmethod
+    def trim_text(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+class RegistrationOut(Model):
+    id: str
+    institution: InstitutionDetailOut
+    contact_name: str
+    email: str
+    email_verified: bool
+    status: Literal["PENDING", "ACCEPTED", "DECLINED"]
+    created_at: str
+    decided_by_name: str | None = None
+    reason: str | None = None
+
+
+class AcceptRegistrationRequest(Model):
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class ReasonRequest(Model):
+    reason: str = Field(min_length=10, max_length=2000)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def trim_reason(cls, value):
+        return value.strip() if isinstance(value, str) else value
+
+
+class InvitationRequest(EmailRequest):
+    name: str = Field(min_length=2, max_length=120)
+    role: Literal["OFFICER", "ADMIN", "AUDITOR"]
+
+
+class AdminUserOut(Model):
+    id: str
+    email: str
+    name: str
+    role: Role
+    institution_name: str | None = None
+    is_active: bool
+    email_verified: bool
+    last_login_at: str | None = None
+    created_at: str
+
+
+class WorkerOut(Model):
+    threads: int
+    queued: int
+    running: int
+    failed_last_24h: int
+
+
+class BackupsOut(Model):
+    last_ok_at: str | None = None
+    target: str
+
+
+class SystemOut(Model):
+    checks: dict[str, str]
+    worker: WorkerOut
+    email_provider: str
+    backups: BackupsOut
+    version: str
+    extras: dict[str, Any] = Field(default_factory=dict)

@@ -70,7 +70,7 @@ def build_openapi() -> dict:
                 "properties": {"file": {"type": "string", "format": "binary"},
                                "doc_type": {"$ref": REF.format(model="DocumentOut") + "/properties/doc_type"}}}}}}
         schema, _ = _response_schema(spec.response)
-        content = {"image/png": {"schema": {"type": "string", "format": "binary"}}} if spec.raw else \
+        content = {spec.raw if isinstance(spec.raw, str) else "image/png": {"schema": {"type": "string", "format": "binary"}}} if spec.raw else \
             {"application/json": {"schema": schema or {"type": "object"}}}
         op["responses"] = {str(spec.status): {"description": "Success", "content": content},
                            "default": {"description": "Error", "content": {"application/json": {

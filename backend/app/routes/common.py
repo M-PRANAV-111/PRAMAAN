@@ -47,7 +47,9 @@ def document_out(d: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
 
 
 def job_out(j: sqlite3.Row) -> dict[str, Any]:
-    return {k: j[k] for k in ("id", "kind", "state", "stage", "progress", "error", "document_id", "application_id")}
+    from ..pipeline.hooks import STAGE_CODES
+    return {**{k: j[k] for k in ("id", "kind", "state", "stage", "progress", "error", "document_id", "application_id")},
+            "stage_code": STAGE_CODES.get(j["stage"])}
 
 
 def application_summary(c: sqlite3.Connection, a: sqlite3.Row) -> dict[str, Any]:

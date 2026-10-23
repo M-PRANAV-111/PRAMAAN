@@ -5,6 +5,7 @@ import shutil
 from starlette.responses import JSONResponse
 
 from ..api import Ctx, route
+from ..features import snapshot
 from ..config import get_settings
 from ..db import reader
 from ..pipeline.doctypes import DOC_TYPES
@@ -48,6 +49,7 @@ def meta(ctx: Ctx):
     with reader() as c:
         row, pack = active_version(c)
     return {
+        "features": snapshot(),
         "doc_types": DOC_TYPES,
         "categories": {k: v.get("label", k) for k, v in pack.categories.items()},
         "application_statuses": list(ApplicationStatus.__args__),

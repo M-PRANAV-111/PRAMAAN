@@ -17,6 +17,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from . import api
+from .routes import core_contract  # shared contract, replaced as features become available
 from .config import get_settings
 from .db import migrate, transaction
 from .pipeline.orchestrator import worker

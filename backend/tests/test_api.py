@@ -260,6 +260,7 @@ class GovernanceTests(ApiTestCase):
         self.assertTrue(auditor.get(self.base + "/audit/verify").json()["valid"])
         with sqlite3.connect(self.db) as c:
             c.execute("UPDATE audit_events SET action = 'tampered' WHERE seq = 5")
+        c.close()  # sqlite's context manager commits but does not close (Windows file lock).
         r = auditor.get(self.base + "/audit/verify").json()
         self.assertEqual((r["valid"], r["first_broken_seq"]), (False, 5))
 

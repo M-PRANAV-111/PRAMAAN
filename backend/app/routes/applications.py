@@ -15,7 +15,8 @@ from .common import application_summary, document_out, finding_out, job_out, loa
 
 
 @route("GET", "/api/v1/applications", summary="List applications visible to the caller", tag="applications",
-       response=list[ApplicationSummary], query={"status": "Filter by derived status"})
+       response=list[ApplicationSummary], query={"status": "Filter by derived status", "q": "Institution name or Permanent ID",
+                                               "limit": "Up to 200", "offset": "Pagination offset"})
 def list_applications(ctx: Ctx):
     p = ctx.user
     with reader() as c:
