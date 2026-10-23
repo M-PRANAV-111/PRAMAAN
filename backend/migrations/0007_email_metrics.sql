@@ -1,0 +1,3 @@
+CREATE TABLE email_failures (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT NOT NULL, error_code TEXT NOT NULL, created_at TEXT NOT NULL
+);

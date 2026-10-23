@@ -586,34 +586,11 @@ export interface WorkerOut {
 }
 
 export const endpoints = {
-  register: { method: "POST", path: "/api/v1/auth/register" },
-  verifyEmail: { method: "POST", path: "/api/v1/auth/verify-email" },
-  acceptInvitation: { method: "POST", path: "/api/v1/auth/accept-invitation" },
-  forgotPassword: { method: "POST", path: "/api/v1/auth/password/forgot" },
-  resetPassword: { method: "POST", path: "/api/v1/auth/password/reset" },
-  changePassword: { method: "POST", path: "/api/v1/auth/password/change" },
-  refresh: { method: "POST", path: "/api/v1/auth/refresh" },
-  getAccount: { method: "GET", path: "/api/v1/account" },
-  updateAccount: { method: "PATCH", path: "/api/v1/account" },
-  listSessions: { method: "GET", path: "/api/v1/account/sessions" },
-  revokeSession: { method: "DELETE", path: "/api/v1/account/sessions/{session_id}" },
-  revokeOtherSessions: { method: "POST", path: "/api/v1/account/sessions/revoke-others" },
+  metrics: { method: "GET", path: "/api/v1/metrics" },
   listNotifications: { method: "GET", path: "/api/v1/notifications" },
   unreadCount: { method: "GET", path: "/api/v1/notifications/unread-count" },
   readNotification: { method: "POST", path: "/api/v1/notifications/{notification_id}/read" },
   readAllNotifications: { method: "POST", path: "/api/v1/notifications/read-all" },
-  applicationTimeline: { method: "GET", path: "/api/v1/applications/{application_id}/timeline" },
-  applicationReport: { method: "GET", path: "/api/v1/applications/{application_id}/report" },
-  documentHistory: { method: "GET", path: "/api/v1/applications/{application_id}/documents/history" },
-  respondToFinding: { method: "POST", path: "/api/v1/findings/{finding_id}/responses" },
-  listRegistrations: { method: "GET", path: "/api/v1/admin/registrations" },
-  acceptRegistration: { method: "POST", path: "/api/v1/admin/registrations/{registration_id}/accept" },
-  declineRegistration: { method: "POST", path: "/api/v1/admin/registrations/{registration_id}/decline" },
-  listUsers: { method: "GET", path: "/api/v1/admin/users" },
-  inviteUser: { method: "POST", path: "/api/v1/admin/invitations" },
-  deactivateUser: { method: "POST", path: "/api/v1/admin/users/{user_id}/deactivate" },
-  reactivateUser: { method: "POST", path: "/api/v1/admin/users/{user_id}/reactivate" },
-  systemStatus: { method: "GET", path: "/api/v1/admin/system" },
   listApplications: { method: "GET", path: "/api/v1/applications" },
   createApplication: { method: "POST", path: "/api/v1/applications" },
   getApplication: { method: "GET", path: "/api/v1/applications/{application_id}" },
@@ -641,37 +618,38 @@ export const endpoints = {
   health: { method: "GET", path: "/api/v1/health" },
   ready: { method: "GET", path: "/api/v1/ready" },
   meta: { method: "GET", path: "/api/v1/meta" },
+  register: { method: "POST", path: "/api/v1/auth/register" },
+  verifyEmail: { method: "POST", path: "/api/v1/auth/verify-email" },
+  forgotPassword: { method: "POST", path: "/api/v1/auth/password/forgot" },
+  resetPassword: { method: "POST", path: "/api/v1/auth/password/reset" },
+  acceptInvitation: { method: "POST", path: "/api/v1/auth/accept-invitation" },
+  changePassword: { method: "POST", path: "/api/v1/auth/password/change" },
+  refresh: { method: "POST", path: "/api/v1/auth/refresh" },
+  getAccount: { method: "GET", path: "/api/v1/account" },
+  updateAccount: { method: "PATCH", path: "/api/v1/account" },
+  listSessions: { method: "GET", path: "/api/v1/account/sessions" },
+  revokeSession: { method: "DELETE", path: "/api/v1/account/sessions/{session_id}" },
+  revokeOtherSessions: { method: "POST", path: "/api/v1/account/sessions/revoke-others" },
+  listRegistrations: { method: "GET", path: "/api/v1/admin/registrations" },
+  acceptRegistration: { method: "POST", path: "/api/v1/admin/registrations/{registration_id}/accept" },
+  declineRegistration: { method: "POST", path: "/api/v1/admin/registrations/{registration_id}/decline" },
+  listUsers: { method: "GET", path: "/api/v1/admin/users" },
+  inviteUser: { method: "POST", path: "/api/v1/admin/invitations" },
+  deactivateUser: { method: "POST", path: "/api/v1/admin/users/{user_id}/deactivate" },
+  reactivateUser: { method: "POST", path: "/api/v1/admin/users/{user_id}/reactivate" },
+  systemStatus: { method: "GET", path: "/api/v1/admin/system" },
+  applicationTimeline: { method: "GET", path: "/api/v1/applications/{application_id}/timeline" },
+  documentHistory: { method: "GET", path: "/api/v1/applications/{application_id}/documents/history" },
+  respondToFinding: { method: "POST", path: "/api/v1/findings/{finding_id}/responses" },
+  applicationReport: { method: "GET", path: "/api/v1/applications/{application_id}/report" },
 } as const;
 
 export interface EndpointTypes {
-  register: { response: AcceptedOut; body: RegisterRequest };
-  verifyEmail: { response: OkOut; body: TokenRequest };
-  acceptInvitation: { response: OkOut; body: AcceptInvitationRequest };
-  forgotPassword: { response: AcceptedOut; body: EmailRequest };
-  resetPassword: { response: OkOut; body: PasswordResetRequest };
-  changePassword: { response: OkOut; body: PasswordChangeRequest };
-  refresh: { response: SessionOut; body: undefined };
-  getAccount: { response: AccountOut; body: undefined };
-  updateAccount: { response: AccountOut; body: AccountUpdate };
-  listSessions: { response: SessionInfoOut[]; body: undefined };
-  revokeSession: { response: OkOut; body: undefined };
-  revokeOtherSessions: { response: OkOut; body: undefined };
+  metrics: { response: Blob; body: undefined };
   listNotifications: { response: NotificationOut[]; body: undefined };
   unreadCount: { response: CountOut; body: undefined };
   readNotification: { response: OkOut; body: undefined };
   readAllNotifications: { response: OkOut; body: undefined };
-  applicationTimeline: { response: TimelineEventOut[]; body: undefined };
-  applicationReport: { response: Blob; body: undefined };
-  documentHistory: { response: DocumentOut[]; body: undefined };
-  respondToFinding: { response: ResponseOut; body: ResponseRequest };
-  listRegistrations: { response: RegistrationOut[]; body: undefined };
-  acceptRegistration: { response: RegistrationOut; body: AcceptRegistrationRequest };
-  declineRegistration: { response: RegistrationOut; body: ReasonRequest };
-  listUsers: { response: AdminUserOut[]; body: undefined };
-  inviteUser: { response: AcceptedOut; body: InvitationRequest };
-  deactivateUser: { response: AdminUserOut; body: ReasonRequest };
-  reactivateUser: { response: AdminUserOut; body: undefined };
-  systemStatus: { response: SystemOut; body: undefined };
   listApplications: { response: ApplicationSummary[]; body: undefined };
   createApplication: { response: ApplicationSummary; body: ApplicationCreate };
   getApplication: { response: ApplicationDetail; body: undefined };
@@ -699,5 +677,29 @@ export interface EndpointTypes {
   health: { response: HealthOut; body: undefined };
   ready: { response: HealthOut; body: undefined };
   meta: { response: MetaOut; body: undefined };
+  register: { response: AcceptedOut; body: RegisterRequest };
+  verifyEmail: { response: OkOut; body: TokenRequest };
+  forgotPassword: { response: AcceptedOut; body: EmailRequest };
+  resetPassword: { response: OkOut; body: PasswordResetRequest };
+  acceptInvitation: { response: OkOut; body: AcceptInvitationRequest };
+  changePassword: { response: OkOut; body: PasswordChangeRequest };
+  refresh: { response: SessionOut; body: undefined };
+  getAccount: { response: AccountOut; body: undefined };
+  updateAccount: { response: AccountOut; body: AccountUpdate };
+  listSessions: { response: SessionInfoOut[]; body: undefined };
+  revokeSession: { response: OkOut; body: undefined };
+  revokeOtherSessions: { response: OkOut; body: undefined };
+  listRegistrations: { response: RegistrationOut[]; body: undefined };
+  acceptRegistration: { response: RegistrationOut; body: AcceptRegistrationRequest };
+  declineRegistration: { response: RegistrationOut; body: ReasonRequest };
+  listUsers: { response: AdminUserOut[]; body: undefined };
+  inviteUser: { response: AcceptedOut; body: InvitationRequest };
+  deactivateUser: { response: AdminUserOut; body: ReasonRequest };
+  reactivateUser: { response: AdminUserOut; body: undefined };
+  systemStatus: { response: SystemOut; body: undefined };
+  applicationTimeline: { response: TimelineEventOut[]; body: undefined };
+  documentHistory: { response: DocumentOut[]; body: undefined };
+  respondToFinding: { response: ResponseOut; body: ResponseRequest };
+  applicationReport: { response: Blob; body: undefined };
 }
 export type EndpointName = keyof typeof endpoints;

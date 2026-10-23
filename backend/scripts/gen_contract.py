@@ -59,6 +59,10 @@ def build_openapi() -> dict:
                   for p in re.findall(r"{(\w+)}", spec.path)]
         params += [{"name": q, "in": "query", "required": False, "description": d, "schema": {"type": "string"}}
                    for q, d in spec.query.items()]
+        if spec.multipart:
+            params.append({"name": "Idempotency-Key", "in": "header", "required": False,
+                           "description": "Replays the first response for this user and application for 24 hours.",
+                           "schema": {"type": "string", "maxLength": 200}})
         if params:
             op["parameters"] = params
         if spec.body is not None:
@@ -75,7 +79,12 @@ def build_openapi() -> dict:
         op["responses"] = {str(spec.status): {"description": "Success", "content": content},
                            "default": {"description": "Error", "content": {"application/json": {
                                "schema": {"$ref": REF.format(model="ErrorOut")}}}}}
-        if spec.public:
+        if spec.method == 'GET' and spec.path == '/api/v1/applications':
+            op['responses']['200']['headers'] = {'X-Total-Count': {
+                'description': 'Matching applications before pagination.', 'schema': {'type': 'integer'}}}
+        if spec.path == '/api/v1/metrics':
+            op['security'] = [{'metrics': []}]
+        elif spec.public:
             op["security"] = []
         else:
             op["x-roles"] = list(spec.roles) if spec.roles else ["any authenticated"]
@@ -89,7 +98,8 @@ def build_openapi() -> dict:
         "paths": paths,
         "components": {"schemas": defs["$defs"], "securitySchemes": {
             "session": {"type": "apiKey", "in": "cookie", "name": api.SESSION_COOKIE},
-            "bearer": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}}},
+            "bearer": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"},
+            "metrics": {"type": "http", "scheme": "bearer", "description": "Separate METRICS_TOKEN; off when unset."}}},
         "security": [{"session": []}, {"bearer": []}],
     }
 

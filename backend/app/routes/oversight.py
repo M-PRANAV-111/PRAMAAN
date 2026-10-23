@@ -43,6 +43,11 @@ def review_finding(ctx: Ctx):
         c.execute("UPDATE applications SET status = ?, updated_at = ? WHERE id = ?", (derive_status(sev), now_iso(), a["id"]))
         audit.record(c, ctx.user, f"finding.{body.decision.lower()}", "finding", f["id"],
                      {"from": f["state"], "to": new_state, "reason_sha256": content_hash(body.reason.strip())}, a["id"])
+        if body.decision == 'REQUEST_CLARIFICATION':
+            from ..notify import emit
+            emit(c,to_institution=a['institution_id'],kind='CLARIFICATION_REQUESTED',title='Clarification requested',
+                 body='An officer requested clarification on a finding.',link=f"/applications/{a['id']}",
+                 application_id=a['id'],finding_id=f['id'])
         return finding_out(c, c.execute("SELECT * FROM findings WHERE id = ?", (f["id"],)).fetchone(), ctx.user)
 
 

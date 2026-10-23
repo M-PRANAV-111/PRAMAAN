@@ -33,3 +33,7 @@ class SharedContractTests(unittest.TestCase):
         self.assertIn('application/pdf', paths['/api/v1/applications/{application_id}/report']['get']['responses']['200']['content'])
         self.assertEqual(len(paths['/api/v1/applications']['get']['parameters']), 4)
         self.assertIn('/api/v1/admin/registrations/{registration_id}/decline', paths)
+        self.assertEqual(paths['/api/v1/metrics']['get']['security'], [{'metrics': []}])
+        self.assertIn('X-Total-Count', paths['/api/v1/applications']['get']['responses']['200']['headers'])
+        self.assertTrue(any(p['name'] == 'Idempotency-Key' for p in
+                            paths['/api/v1/applications/{application_id}/documents']['post']['parameters']))

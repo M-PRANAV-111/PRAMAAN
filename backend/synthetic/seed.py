@@ -159,6 +159,8 @@ def main() -> None:
     ap.add_argument("--reset", action="store_true", help="delete DATA_DIR before seeding")
     args = ap.parse_args()
     s = get_settings()
+    if s.env == "production":
+        raise RuntimeError("Synthetic demo seeding is forbidden in production")
     if args.reset and s.data_dir.exists():
         shutil.rmtree(s.data_dir)
     bootstrap()
@@ -174,7 +176,7 @@ def main() -> None:
     with transaction() as c:
         for spec in INSTITUTIONS:
             iid = new_id("ins")
-            c.execute("INSERT INTO institutions VALUES (?,?,?,?,?,?)", (iid, spec.pid, spec.name, spec.state, spec.trust, ts))
+            c.execute("INSERT INTO institutions (id,aicte_permanent_id,name,state,trust_name,created_at) VALUES (?,?,?,?,?,?)", (iid, spec.pid, spec.name, spec.state, spec.trust, ts))
             c.execute("INSERT INTO aicte_records VALUES (?,?,?,?,1)", (iid, spec.intake, PREV_AY, json.dumps(
                 {"UG Engg.": ["Computer Science and Engineering", "Electronics and Communication Engg.", "Mechanical Engineering"]})))
             uid = new_id("usr")

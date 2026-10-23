@@ -94,3 +94,32 @@ Every result below was produced by running the commands shown on 22 Oct 2026 in 
 - **Open issues:** None (`0` blocker, `0` major, `0` minor).
 - **Non-defect recommendations:**
   1. In `backend/tests/test_api.py:218`, `GovernanceTests.test_audit_chain_detects_database_tampering` opens a raw `sqlite3.connect(self.db)` without a `with` / `.close()` block, which can cause a harmless `PermissionError` during `TempDirectory.cleanup()` on Windows after all 14 tests pass. Closing that connection explicitly in `test_api.py` would avoid the Windows temp-file lock when backend edits are in scope.
+
+## Core backend — local verification, 23 October 2026
+
+Environment: Windows AMD64, Python 3.13.14, isolated temporary SQLite databases, console email, real Uvicorn servers and headless Chromium. Branch: `astra/core-backend`, worktree `../pramaan-astra`. Remote publication was omitted at the user's request. See [CORE_BACKEND_REPORT.md](CORE_BACKEND_REPORT.md) for the implementation inventory and service limitations.
+
+| Check | Actual result |
+|---|---|
+| Complete backend suite: `python -m unittest discover -s tests -t .` | **PASS — 68 tests in 110.547s, OK** |
+| Contract: `python -m scripts.gen_contract --check` | **PASS — 56 operations, 63 schemas verified** |
+| `npm --prefix front run typecheck` | **PASS — TypeScript exited 0** |
+| `npm --prefix front run build` | **PASS — signed-in JS 332.3 KB, start-page chunk 43.1 KB, CSS 46.1 KB** |
+| `front/e2e/signin_check.py` | **PASS — 28 checks; no console/page errors apart from three expected 401 responses** |
+| `front/e2e/journey_check.py` | **PASS — 48/48 checks, page errors: none** |
+| Synthetic seed + `front/e2e/walkthrough.py` | **PASS — live officer/institution workflow, uploads, repair, submission, audit and mobile landing** |
+| `front/e2e/measure_page.py` | **Completed — measured five viewports (1440×900 through 360×740); informational output, not an assertion suite** |
+| PDF report | **PASS — `%PDF`, disclaimer, simulated-source labels, audit event, Helvetica and cross-institution access/redaction assertions; all five rendered sample pages visually inspected** |
+| Local backup/restore | **PASS — database/file round trip, newest-14 retention, corruption/traversal rejection and active server/job restore refusal** |
+| Synthetic benchmark: `python -m eval.benchmark` | **Completed — 34 bundles, 26/26 planted faults detected; 2/8 hard negatives raised `INTEGRITY:INCREMENTAL_UPDATE`; median 3.42s, p95 3.89s, max 3.92s per bundle** |
+| `git diff --check` | **PASS — no whitespace errors** |
+
+The original source contained 20 unit tests and 14 API tests (**34**, not the prompt's stated 36). All remain in the passing suite with their assertions intact. The existing SQLite connection was explicitly closed to resolve the previously documented Windows teardown failure.
+
+New tests exercise registration/verification/acceptance, duplicate responses and timing, password policy, reset token expiry/reuse and session revocation, invitations and administrator guards, rate limits, account updates, notification isolation, query compatibility, versions, timeline/replies, report authorization and redaction, retry backoff and nonretryable errors, hard process termination, consecutive supervised jobs, parent loss, upload replay, inert/ordered hooks, local backup/restore, metrics authentication/log redaction, mocked SMTP/Resend behavior and production configuration refusal. Expected failure-path tests log sanitized `http_503`, timeout and validation error codes.
+
+A final regression run found three jobs stuck at startup after adding parent-death monitoring. The cause was a blocking stdin-pipe read during native-library initialization on Windows. It was replaced with nonblocking pipe-liveness polling; consecutive-job and parent-pipe closure regression checks were added. The complete 68-test run above passed after the fix.
+
+Browser screenshots, text logs, synthetic data and the PDF sample stay under ignored `backend/var/qa` / `backend/var/qa-data-*`; no credentials or generated data are committed. One earlier QA wrapper encountered a Windows console encoding error while printing a successful journey result; the underlying Chromium process completed all 48 checks and its UTF-8 output was preserved. This does not represent an application failure.
+
+Limits: this benchmark is synthetic and is not an accuracy claim for real submissions. The two hard-negative incremental-update findings remain advisory indicators; rule/integrity policy was outside this change. Live SMTP/Resend/S3/Sentry, Docker, a production deployment, multi-instance/load tests and real documents were not tested. The frontend checks cover the existing frontend in this worktree; new frontend screens and unrelated concurrent branch changes are separate workstreams.

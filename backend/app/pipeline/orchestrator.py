@@ -7,7 +7,10 @@ import logging
 import queue
 import sqlite3
 import threading
-from datetime import date
+import time
+import subprocess
+import sys
+from datetime import date, timedelta, datetime, timezone
 from typing import Any
 
 from PIL import Image
@@ -21,8 +24,19 @@ from . import dedupe, extract, integrity, verification
 from .doctypes import DOC_TYPES, IMAGE_DOC_TYPES
 from .findings import ACTIVE_STATES, FindingDraft, derive_status, from_duplicate, from_integrity, from_rule
 from .rules_engine import EvalContext, evaluate, rules_reading
+from .hooks import STAGE_CODES, register_step, run_steps
 
 log = logging.getLogger("pramaan.pipeline")
+_execution = threading.local()
+
+
+class JobTimeout(TimeoutError):
+    pass
+
+
+def _check_deadline():
+    if time.monotonic() > getattr(_execution, 'deadline', float('inf')):
+        raise JobTimeout()
 
 
 # --------------------------------------------------------------------------------------- jobs
@@ -30,17 +44,39 @@ def create_job(conn: sqlite3.Connection, kind: str, application_id: str, documen
     job_id = new_id("job")
     ts = now_iso()
     conn.execute(
-        "INSERT INTO jobs (id, application_id, document_id, kind, state, stage, progress, created_at, updated_at)"
-        " VALUES (?,?,?,?, 'QUEUED', 'Queued', 0, ?, ?)",
+        "INSERT INTO jobs (id, application_id, document_id, kind, state, stage, progress, created_at, updated_at, stage_code)"
+        " VALUES (?,?,?,?, 'QUEUED', 'Queued', 0, ?, ?, 'QUEUED')",
         (job_id, application_id, document_id, kind, ts, ts),
     )
     return job_id
 
 
-def _stage(job_id: str, stage: str, progress: int, state: str = "RUNNING", error: str | None = None) -> None:
+def _stage(job_id: str, stage: str, progress: int, state: str = "RUNNING", error: str | None = None,
+           code: str | None = None, error_message: str | None = None, conn=None) -> None:
+    if state != 'FAILED':
+        _check_deadline()
+    code = code or STAGE_CODES.get(stage)
+    from ..schemas import StageCode
+    if code not in StageCode.__args__:
+        raise ValueError('Unknown stage code')
+    def update(c):
+        previous = getattr(_execution,'stage_started',None)
+        if previous and previous[0] == job_id:
+            c.execute('INSERT INTO job_stage_durations (job_id,stage_code,seconds) VALUES (?,?,?)',
+                      (job_id,previous[1],max(0,time.monotonic()-previous[2])))
+        else:
+            old=c.execute('SELECT stage_code,updated_at FROM jobs WHERE id=?',(job_id,)).fetchone()
+            if old and old['stage_code']:
+                c.execute('INSERT INTO job_stage_durations (job_id,stage_code,seconds) VALUES (?,?,?)',
+                          (job_id,old['stage_code'],max(0,(datetime.now(timezone.utc)-datetime.fromisoformat(old['updated_at'])).total_seconds())))
+        _execution.stage_started=(job_id,code,time.monotonic()) if state=='RUNNING' else None
+        c.execute("UPDATE jobs SET stage=?,progress=?,state=?,error=?,updated_at=?,stage_code=?,error_message=? WHERE id=?",
+                  (stage, progress, state, error, now_iso(), code, error_message, job_id))
+    if conn is not None:
+        update(conn)
+        return
     with transaction() as c:
-        c.execute("UPDATE jobs SET stage = ?, progress = ?, state = ?, error = ?, updated_at = ? WHERE id = ?",
-                  (stage, progress, state, error, now_iso(), job_id))
+        update(c)
 
 
 class Worker:
@@ -60,7 +96,7 @@ class Worker:
             self._threads.append(t)
         with transaction() as c:  # resume jobs interrupted by a restart
             pending = [r["id"] for r in c.execute("SELECT id FROM jobs WHERE state IN ('QUEUED','RUNNING') ORDER BY created_at")]
-            c.execute("UPDATE jobs SET state = 'QUEUED', stage = 'Re-queued after restart' WHERE state = 'RUNNING'")
+            c.execute("UPDATE jobs SET state = 'QUEUED', stage = 'Re-queued after restart', stage_code='QUEUED' WHERE state = 'RUNNING'")
         for job_id in pending:
             self._q.put(job_id)
 
@@ -73,12 +109,23 @@ class Worker:
     def _loop(self) -> None:
         while True:
             job_id = self._q.get()
+            if job_id is None:
+                self._q.task_done()
+                return
             try:
-                run_job(job_id)
+                run_job_supervised(job_id)
             except Exception:  # run_job records the failure; never let the worker die
-                log.exception("job %s crashed", job_id)
+                log.error("worker_failure code=unexpected")
             finally:
                 self._q.task_done()
+
+    def stop(self):
+        for _ in self._threads:
+            self._q.put(None)
+        for thread in self._threads:
+            thread.join()
+        self._threads.clear()
+        self._started=False
 
     def drain(self, timeout: float = 120.0) -> None:
         """Test helper: wait until all queued jobs are processed."""
@@ -94,21 +141,77 @@ worker = Worker()
 def run_job(job_id: str) -> None:
     with reader() as c:
         job = c.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
-    if job is None:
+    if job is None or job['state'] in ('DONE','FAILED'):
         return
+    _execution.deadline = time.monotonic() + get_settings().job_timeout_seconds
     try:
-        if job["kind"] == "PROCESS_DOCUMENT":
-            process_document(job_id, job["document_id"], job["application_id"])
-        elif job["kind"] == "VALIDATE":
-            _stage(job_id, "Evaluating rule pack", 40)
-            run_validation(job["application_id"], trigger="manual")
-        _stage(job_id, "Done", 100, state="DONE")
-    except Exception as exc:  # recorded for the UI; details stay in server logs
-        log.exception("job %s failed", job_id)
-        _stage(job_id, "Failed", 100, state="FAILED", error=type(exc).__name__)
-        if job["document_id"]:
+        for attempt in range(3):
             with transaction() as c:
-                c.execute("UPDATE documents SET processing_state = 'FAILED' WHERE id = ?", (job["document_id"],))
+                c.execute('UPDATE jobs SET attempts=? WHERE id=?',(attempt+1,job_id))
+            try:
+                _check_deadline()
+                if job['kind']=='PROCESS_DOCUMENT':
+                    process_document(job_id,job['document_id'],job['application_id'])
+                else:
+                    _stage(job_id,'Evaluating rule pack',40)
+                    run_validation(job['application_id'],trigger='manual')
+                _check_deadline()
+                with transaction() as c:
+                    app = dict(c.execute('SELECT * FROM applications WHERE id=?',(job['application_id'],)).fetchone())
+                    run_steps('after_rules',c,job_id,app,lambda code,text,progress: _stage(job_id,text,progress,code=code,conn=c))
+                    _check_deadline()
+                _stage(job_id,'Done',100,state='DONE')
+                return
+            except (OSError, TimeoutError) as exc:
+                if isinstance(exc,JobTimeout) or attempt==2:
+                    raise
+                delay = (2,8)[attempt]
+                if time.monotonic()+delay >= _execution.deadline:
+                    raise JobTimeout() from None
+                time.sleep(delay)
+    except Exception as exc:
+        fail_job(job_id, 'timeout' if isinstance(exc,JobTimeout) else type(exc).__name__)
+    finally:
+        _execution.deadline = float('inf')
+
+
+def fail_job(job_id, code):
+    messages = {'timeout':'Processing took too long. Try again or upload a smaller document.',
+                'OSError':'The stored file could not be read. Please try again.',
+                'TimeoutError':'A processing service did not respond. Please try again.',
+                'PasswordError':'This PDF is password-protected. Upload a copy without a password.'}
+    message = messages.get(code,'This document could not be processed. Check the file and try again.')
+    from ..notify import emit
+    with transaction() as c:
+        job = c.execute('SELECT * FROM jobs WHERE id=?',(job_id,)).fetchone()
+        if not job or job['state'] in ('DONE','FAILED'):
+            return
+        _stage(job_id,'Failed',100,state='FAILED',error=code,error_message=message,conn=c)
+        if job['document_id']:
+            c.execute("UPDATE documents SET processing_state='FAILED' WHERE id=?",(job['document_id'],))
+        app = c.execute('SELECT institution_id FROM applications WHERE id=?',(job['application_id'],)).fetchone()
+        audit.record(c,None,'job.failed','job',job_id,{'code':code},job['application_id'])
+        emit(c,to_institution=app['institution_id'],kind='PROCESSING_FAILED',title='Processing failed',body=message,
+             link=f"/applications/{job['application_id']}",application_id=job['application_id'])
+    log.warning('job_failure code=%s',code)
+
+
+def run_job_supervised(job_id):
+    from ..config import BACKEND_DIR
+    proc = subprocess.Popen([sys.executable,'-m','app.pipeline.job_runner',job_id],cwd=BACKEND_DIR,
+                            stdin=subprocess.PIPE,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    try:
+        proc.wait(timeout=get_settings().job_timeout_seconds)
+        if proc.returncode:
+            fail_job(job_id,'worker_exit')
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        fail_job(job_id,'timeout')
+    finally:
+        if proc.stdin:
+            proc.stdin.close()
+        (get_settings().data_dir/('.job-'+job_id+'.lock')).unlink(missing_ok=True)
 
 
 # ------------------------------------------------------------------------------ document pipeline
@@ -144,6 +247,13 @@ def process_document(job_id: str, document_id: str, application_id: str) -> None
                         "detected_type": result.detected_type, "classification_scores": result.classification_scores})
         _stage(job_id, "Extracting fields", 40)
         claims = extract.extract_claims(result, doc["doc_type"])
+        with transaction() as c:
+            _save_claims(c,document_id,application_id,claims)
+            run_steps('after_fields',c,job_id,doc,lambda code,text,progress: _stage(job_id,text,progress,code=code,conn=c))
+            _check_deadline()
+            claims = [extract.ExtractedClaim(r['field'],r['value_raw'],r['value_norm'],r['value_type'],r['page'],
+                      (r['x0'],r['y0'],r['x1'],r['y1']),r['page_width'],r['page_height'],r['extractor'],r['confidence'])
+                      for r in c.execute('SELECT * FROM claims WHERE document_id=?',(document_id,))]
         if result.detected_type and result.detected_type != doc["doc_type"]:
             signals.append(integrity.Indicator(
                 "DECLARED_TYPE_MISMATCH",
@@ -168,15 +278,12 @@ def process_document(job_id: str, document_id: str, application_id: str) -> None
         final_status, attempts = verification.run_ladder(ctx)
 
     with transaction() as c:
+        _check_deadline()
         ts = now_iso()
-        c.execute("DELETE FROM claims WHERE document_id = ?", (document_id,))
-        for cl in claims:
-            c.execute(
-                "INSERT INTO claims (id, document_id, application_id, field, value_raw, value_norm, value_type, page,"
-                " x0, y0, x1, y1, page_width, page_height, extractor, confidence) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (new_id("clm"), document_id, application_id, cl.field, cl.value_raw, cl.value_norm, cl.value_type,
-                 cl.page, *cl.bbox, cl.page_width, cl.page_height, cl.extractor, cl.confidence),
-            )
+        if doc['doc_type'] in IMAGE_DOC_TYPES:
+            _save_claims(c,document_id,application_id,claims)
+        c.execute('DELETE FROM integrity_signals WHERE document_id=?',(document_id,))
+        c.execute('DELETE FROM verifications WHERE document_id=?',(document_id,))
         for s in signals:
             page_size = None
             if s.page is not None:
@@ -203,6 +310,19 @@ def process_document(job_id: str, document_id: str, application_id: str) -> None
         audit.record(c, None, "document.processed", "document", document_id,
                      {"claims": len(claims), "indicators": [s.kind for s in signals], "verification": final_status},
                      application_id)
+        from ..notify import emit
+        today = datetime.now(timezone.utc).date()
+        for cl in claims:
+            if cl.field == 'valid_to' and cl.value_norm:
+                try:
+                    expiry = date.fromisoformat(cl.value_norm)
+                except ValueError:
+                    continue
+                if today <= expiry <= today+timedelta(days=60) and not c.execute(
+                        "SELECT 1 FROM notifications WHERE kind='VALIDITY_ENDING' AND application_id=? AND body=?",
+                        (application_id,document_id)).fetchone():
+                    emit(c,to_institution=inst['id'],kind='VALIDITY_ENDING',title='Document validity ending within 60 days',
+                         body=document_id,link=f'/applications/{application_id}',application_id=application_id)
 
     _stage(job_id, "Re-validating affected rules", 85)
     with reader() as c:
@@ -214,6 +334,15 @@ def process_document(job_id: str, document_id: str, application_id: str) -> None
 
 
 # ------------------------------------------------------------------------------- validation
+def _save_claims(c, document_id, application_id, claims):
+    c.execute('DELETE FROM claims WHERE document_id=?',(document_id,))
+    for cl in claims:
+        c.execute('INSERT INTO claims (id,document_id,application_id,field,value_raw,value_norm,value_type,page,'
+                  'x0,y0,x1,y1,page_width,page_height,extractor,confidence) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                  (new_id('clm'),document_id,application_id,cl.field,cl.value_raw,cl.value_norm,cl.value_type,cl.page,
+                   *cl.bbox,cl.page_width,cl.page_height,cl.extractor,cl.confidence))
+
+
 def _load_eval_context(c: sqlite3.Connection, application_id: str) -> tuple[EvalContext, dict[str, dict]]:
     app, inst, rec = _app_context(c, application_id)
     docs = [dict(r) for r in c.execute(
@@ -277,6 +406,7 @@ def run_validation(application_id: str, trigger: str, changed_doc_types: set[str
     run_id = new_id("run")
     ts = now_iso()
     with transaction() as c:
+        _check_deadline()
         c.execute("INSERT INTO validation_runs (id, application_id, rule_pack_version_id, trigger, affected_rules_json,"
                   " started_at) VALUES (?,?,?,?,?,?)",
                   (run_id, application_id, pack_row["id"], trigger, dumps(sorted(scope_rules)), ts))
@@ -327,6 +457,15 @@ def _reconcile(c: sqlite3.Connection, application_id: str, run_id: str, drafts: 
             (fid, application_id, run_id, d.fingerprint, d.source_kind, d.rule_id, d.title, d.severity, d.explanation,
              d.remedy, d.fix_doc_type, d.action_owner, dumps(d.proof), dumps(d.evidence), ts))
         created += 1
+        audit.record(c,None,'finding.raised','finding',fid,{},application_id)
+        from ..notify import emit
+        inst = c.execute('SELECT institution_id FROM applications WHERE id=?',(application_id,)).fetchone()[0]
+        if d.severity == 'DEFICIENCY':
+            emit(c,to_institution=inst,kind='FINDING_RAISED',title='New deficiency',body=d.title,
+                 link=f'/applications/{application_id}',application_id=application_id,finding_id=fid)
+        if d.action_owner == 'OFFICER':
+            emit(c,to_role='OFFICER',kind='OFFICER_NEEDED',title='An item needs officer review',body=d.title,
+                 link=f'/applications/{application_id}',application_id=application_id,finding_id=fid)
     for f in existing:
         if f["fingerprint"] in new_fps:
             continue
@@ -336,6 +475,7 @@ def _reconcile(c: sqlite3.Connection, application_id: str, run_id: str, drafts: 
             c.execute("UPDATE findings SET state = 'RESOLVED', resolved_at = ?, resolved_by_run = ? WHERE id = ?",
                       (ts, run_id, f["id"]))
             resolved += 1
+            audit.record(c,None,'finding.resolved','finding',f['id'],{},application_id)
     return {"created": created, "updated": updated, "resolved": resolved}
 
 

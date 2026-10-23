@@ -65,18 +65,19 @@ class Principal:
     institution_id: str | None
     name: str
     email: str
+    session_id: str | None = None
 
     @property
     def is_institution(self) -> bool:
         return self.role == "INSTITUTION"
 
 
-def issue_token(p: Principal) -> tuple[str, datetime]:
+def issue_token(p: Principal, *, session_id: str | None = None) -> tuple[str, datetime]:
     s = get_settings()
     exp = datetime.now(timezone.utc) + timedelta(minutes=s.jwt_ttl_minutes)
     payload = {
         "sub": p.user_id, "role": p.role, "inst": p.institution_id, "name": p.name, "email": p.email,
-        "exp": exp, "iat": datetime.now(timezone.utc), "iss": "pramaan", "jti": secrets.token_hex(8),
+        "exp": exp, "iat": datetime.now(timezone.utc), "iss": "pramaan", "jti": session_id or secrets.token_urlsafe(24),
     }
     return jwt.encode(payload, s.jwt_secret, algorithm="HS256"), exp
 
@@ -91,7 +92,7 @@ def decode_token(token: str) -> Principal | None:
     if data.get("role") not in ROLES:
         return None
     return Principal(user_id=data["sub"], role=data["role"], institution_id=data.get("inst"),
-                     name=data.get("name", ""), email=data.get("email", ""))
+                     name=data.get("name", ""), email=data.get("email", ""), session_id=data.get("jti"))
 
 
 class RateLimiter:

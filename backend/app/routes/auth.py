@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from starlette.responses import JSONResponse
 
-from .. import audit
+from .. import audit, sessions
 from ..api import SESSION_COOKIE, ApiError, Ctx, route
 from ..config import get_settings
-from ..db import reader, transaction
+from ..db import now_iso, reader, transaction
 from ..schemas import LoginRequest, OkOut, SessionOut, UserOut
 from ..security import Principal, dummy_verify, issue_token, rate_limiter, verify_password
 
@@ -38,9 +38,22 @@ def login(ctx: Ctx):
             raise ApiError(401, "invalid_credentials", "Email or password is incorrect")
         user = _user_out(c, u)
     p = Principal(u["id"], u["role"], u["institution_id"], u["name"], u["email"])
-    token, exp = issue_token(p)
     with transaction() as w:
+        if not w.execute("SELECT 1 FROM users WHERE id=? AND is_active=1 AND email_verified=1 AND password_hash=?",
+                         (p.user_id,u['password_hash'])).fetchone():
+            raise ApiError(401, "invalid_credentials", "Email or password is incorrect")
+        resp = session_response(w, ctx, p, user)
+        w.execute("UPDATE users SET last_login_at=? WHERE id=?", (now_iso(), p.user_id))
         audit.record(w, p, "auth.login", "user", u["id"], {})
+    return resp
+
+
+def session_response(c, ctx, p, user):
+    s = get_settings()
+    import secrets
+    sid = secrets.token_urlsafe(24)
+    token, exp = issue_token(p, session_id=sid)
+    sessions.create(c, p.user_id, exp.isoformat(timespec="seconds"), ctx.request.headers.get("user-agent", ""), ctx.client_ip, sid)
     resp = JSONResponse(SessionOut(user=UserOut(**user), expires_at=exp.isoformat()).model_dump(mode="json"))
     resp.set_cookie(SESSION_COOKIE, token, max_age=s.jwt_ttl_minutes * 60, httponly=True, secure=s.cookie_secure,
                     samesite="strict", path="/")
@@ -54,6 +67,9 @@ def _h(email: str) -> str:
 
 @route("POST", "/api/v1/auth/logout", summary="End the session", tag="auth", response=OkOut)
 def logout(ctx: Ctx):
+    with transaction() as c:
+        c.execute("UPDATE sessions SET revoked_at=? WHERE id=? AND user_id=?", (now_iso(), ctx.user.session_id, ctx.user.user_id))
+        audit.record(c, ctx.user, "auth.logout", "session", ctx.user.session_id)
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(SESSION_COOKIE, path="/")
     return resp
