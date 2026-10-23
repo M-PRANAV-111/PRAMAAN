@@ -11,11 +11,15 @@ from ..rulepacks import active_version
 from ..schemas import (ApplicationCreate, ApplicationDetail, ApplicationSummary, FindingOut, JobOut, RepairPlanOut,
                        RunOut, VerificationOut)
 from ..security import REVIEWER_ROLES
+from ..schemas import ApplicationStatus
+from starlette.responses import JSONResponse
+from .notifications import pagination
 from .common import application_summary, document_out, finding_out, job_out, load_application, run_out
 
 
 @route("GET", "/api/v1/applications", summary="List applications visible to the caller", tag="applications",
-       response=list[ApplicationSummary], query={"status": "Filter by derived status"})
+       response=list[ApplicationSummary], query={"status": "Filter by derived status", "q": "Institution name or Permanent ID",
+                                               "limit": "Up to 200", "offset": "Pagination offset"})
 def list_applications(ctx: Ctx):
     p = ctx.user
     with reader() as c:
@@ -26,7 +30,19 @@ def list_applications(ctx: Ctx):
             rows = c.execute("SELECT * FROM applications WHERE submitted_at IS NOT NULL ORDER BY submitted_at DESC").fetchall()
         out = [application_summary(c, r) for r in rows]
     status = ctx.query.get("status")
-    return [a for a in out if not status or a["status"] == status]
+    if status and status not in ApplicationStatus.__args__:
+        raise ApiError(422, 'validation_error', 'Unknown application status')
+    q = ctx.query.get('q','').casefold().strip()
+    if len(q)>240:
+        raise ApiError(422,'validation_error','Search text must be at most 240 characters')
+    out = [a for a in out if (not status or a['status']==status) and (not q or
+           q in a['institution']['name'].casefold() or q in a['institution']['aicte_permanent_id'].casefold())]
+    total = len(out)
+    if ctx.query:
+        limit, offset = pagination(ctx.query, 200)
+        out = out[offset:offset+limit]
+    return JSONResponse([ApplicationSummary.model_validate(a).model_dump(mode='json') for a in out],
+                        headers={'X-Total-Count':str(total)})
 
 
 @route("POST", "/api/v1/applications", summary="Create a draft application", tag="applications",
@@ -60,14 +76,14 @@ def get_application(ctx: Ctx):
         current = {}
         for d in docs:
             if d["superseded_by"] is None and d["doc_type"] not in current:
-                current[d["doc_type"]] = document_out(d)
+                current[d["doc_type"]] = document_out(d, c)
         checklist = [{"doc_type": i.doc_type, "label": DOC_TYPES[i.doc_type], "required": i.required, "note": i.note,
                       "document": current.get(i.doc_type)} for i in pack.checklist]
         run = c.execute("SELECT * FROM validation_runs WHERE application_id = ? ORDER BY started_at DESC, rowid DESC LIMIT 1",
                         (a["id"],)).fetchone()
         jobs = c.execute("SELECT * FROM jobs WHERE application_id = ? AND state IN ('QUEUED','RUNNING') ORDER BY created_at",
                          (a["id"],)).fetchall()
-        return {**application_summary(c, a), "checklist": checklist, "documents": [document_out(d) for d in docs],
+        return {**application_summary(c, a), "checklist": checklist, "documents": [document_out(d, c) for d in docs if d['superseded_by'] is None],
                 "latest_run": run_out(c, run) if run else None, "active_jobs": [job_out(j) for j in jobs],
                 "rule_pack_version": row["version"]}
 
@@ -86,6 +102,11 @@ def submit_application(ctx: Ctx):
         ts = now_iso()
         c.execute("UPDATE applications SET submitted_at = ?, updated_at = ? WHERE id = ?", (ts, ts, a["id"]))
         audit.record(c, ctx.user, "application.submitted", "application", a["id"], {}, a["id"])
+        from ..notify import emit
+        for f in c.execute("SELECT id,title FROM findings WHERE application_id=? AND action_owner='OFFICER' "
+                           "AND state IN ('OPEN','CONFIRMED','ESCALATED','CLARIFICATION_REQUESTED')",(a['id'],)):
+            emit(c,to_role='OFFICER',kind='OFFICER_NEEDED',title='An item needs officer review',body=f['title'],
+                 link=f"/applications/{a['id']}",application_id=a['id'],finding_id=f['id'])
         return application_summary(c, c.execute("SELECT * FROM applications WHERE id = ?", (a["id"],)).fetchone())
 
 

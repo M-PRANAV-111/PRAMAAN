@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,15 @@ from typing import Any, Iterator
 from .config import BACKEND_DIR, get_settings
 
 MIGRATIONS_DIR = BACKEND_DIR / "migrations"
+_local = threading.local()
+
+
+def after_commit(conn, fn):
+    """Schedule a side effect only after its transaction commits."""
+    callbacks = getattr(_local, "transactions", {}).get(id(conn))
+    if callbacks is None:
+        raise RuntimeError("after_commit requires a managed transaction")
+    callbacks.append(fn)
 
 
 def now_iso() -> str:
@@ -42,6 +52,9 @@ def transaction(conn: sqlite3.Connection | None = None) -> Iterator[sqlite3.Conn
     own = conn is None
     c = conn or connect()
     c.execute("BEGIN IMMEDIATE")
+    if not hasattr(_local, "transactions"):
+        _local.transactions = {}
+    callbacks = _local.transactions[id(c)] = []
     try:
         yield c
         c.execute("COMMIT")
@@ -49,8 +62,11 @@ def transaction(conn: sqlite3.Connection | None = None) -> Iterator[sqlite3.Conn
         c.execute("ROLLBACK")
         raise
     finally:
+        _local.transactions.pop(id(c), None)
         if own:
             c.close()
+    for fn in callbacks:
+        fn()
 
 
 @contextmanager

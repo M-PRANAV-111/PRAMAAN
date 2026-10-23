@@ -51,7 +51,58 @@ The contract is generated from code, so it cannot drift from what the server doe
 | `GET` | `/api/v1/ready` | Readiness probe (database, rule pack, storage, OCR) | public | — | 200 `HealthOut` |
 | `GET` | `/api/v1/meta` | Enumerations and configuration the UI needs | public | — | 200 `MetaOut` |
 
-## Example: a finding (abridged)
+## Core backend extension (23 October 2026)
+
+The generated contract now contains 56 operations and 63 schemas. Existing fields remain; the shared additions have defaults: `MetaOut.features`, `JobOut.stage_code/error_message`, `DocumentOut.version`, `FindingOut.responses/explanation_source/ai_assisted`, and `DocumentEvidence.ai_suggestions`.
+
+| Method | Path (under `/api/v1`) | Body → response | Access |
+|---|---|---|---|
+| POST | `/auth/register` | `RegisterRequest` → 202 `AcceptedOut` | Public, 5/hour/IP |
+| POST | `/auth/verify-email` | `TokenRequest` → `OkOut` | Public, 10/hour/IP |
+| POST | `/auth/accept-invitation` | `AcceptInvitationRequest` → `OkOut` | Public, 10/hour/IP |
+| POST | `/auth/password/forgot` | `EmailRequest` → 202 `AcceptedOut` | Public, 5/hour/IP and 3/hour/email hash |
+| POST | `/auth/password/reset` | `PasswordResetRequest` → `OkOut` | Public, 10/hour/IP |
+| POST | `/auth/password/change` | `PasswordChangeRequest` → `OkOut` | Authenticated, current password required |
+| POST | `/auth/refresh` | No body → `SessionOut` | Authenticated, 30/minute/IP |
+| GET / PATCH | `/account` | No body / `AccountUpdate` → `AccountOut` | Own account |
+| GET | `/account/sessions` | → `SessionInfoOut[]` | Own active sessions |
+| DELETE | `/account/sessions/{session_id}` | → `OkOut` | Own session; unknown/foreign → 404 |
+| POST | `/account/sessions/revoke-others` | → `OkOut` | Own sessions |
+| GET | `/notifications` | `unread`, `limit`, `offset` → `NotificationOut[]` | Own notifications |
+| GET | `/notifications/unread-count` | → `CountOut` | Own notifications |
+| POST | `/notifications/{notification_id}/read` | → `OkOut` | Owner |
+| POST | `/notifications/read-all` | → `OkOut` | Own notifications |
+| GET | `/applications/{application_id}/timeline` | → `TimelineEventOut[]` | Existing application visibility |
+| GET | `/applications/{application_id}/report` | → `application/pdf` attachment | Existing application visibility; audited |
+| GET | `/applications/{application_id}/documents/history` | → `DocumentOut[]` including superseded | Existing application visibility |
+| POST | `/findings/{finding_id}/responses` | `ResponseRequest` → `ResponseOut` | INSTITUTION, own application; attachment must belong to it |
+| GET | `/admin/registrations` | `status` → `RegistrationOut[]` | ADMIN; email-verified requests only |
+| POST | `/admin/registrations/{registration_id}/accept` | `AcceptRegistrationRequest` → `RegistrationOut` | ADMIN |
+| POST | `/admin/registrations/{registration_id}/decline` | `ReasonRequest` → `RegistrationOut` | ADMIN; reason at least 10 trimmed characters |
+| GET | `/admin/users` | `role`, `active` → `AdminUserOut[]` | ADMIN |
+| POST | `/admin/invitations` | `InvitationRequest` → 202 `AcceptedOut` | ADMIN; OFFICER, ADMIN or AUDITOR only |
+| POST | `/admin/users/{user_id}/deactivate` | `ReasonRequest` → `AdminUserOut` | ADMIN; self/last-admin guards |
+| POST | `/admin/users/{user_id}/reactivate` | → `AdminUserOut` | ADMIN; verified and registration eligible |
+| GET | `/admin/system` | → `SystemOut` | ADMIN, AUDITOR |
+| GET | `/metrics` | → Prometheus text | Separate `Authorization: Bearer <METRICS_TOKEN>`; 404 when disabled |
+
+`GET /applications` accepts case-insensitive `q` (institution name or Permanent ID), an `ApplicationStatus` in `status`, `limit` (1–200), and non-negative `offset`. `X-Total-Count` reports the count after filters, before pagination. With no parameters, the JSON bytes and ordering match the original list implementation. With parameters, the default limit is 200. Invalid filters return 422.
+
+Document versions use `(uploaded_at, rowid)` ordering within `(application_id, doc_type)`; rowid breaks same-second upload ties. The workspace lists current documents; the history endpoint includes every version. Replies are visible to the institution that owns the application and to authorized oversight users.
+
+Upload requests may include `Idempotency-Key` (1–200 visible ASCII characters). The key is scoped to the authenticated user and application for 24 hours. Replays return the original 202 JSON bytes, even after processing finishes; poll its job to see current state. Concurrent duplicate keys cannot create two document rows. The same key with different content still returns the first response.
+
+Stage codes are `QUEUED`, `READING`, `FINGERPRINTING`, `EXTRACTING_TEXT`, `EXTRACTING_FIELDS`, `AI_EXTRACTION`, `INTEGRITY`, `VERIFYING`, `RULES`, `ROUTING`, `DONE`, `FAILED`. Existing stage text is preserved. `error` remains a code; `error_message` is safe, plain-language guidance.
+
+Feature registration: `app.features.register(name, bool_or_callable)`. Implemented core flags are `registration`, `password_reset`, `notifications`, `timeline`, `reports`, and `clarifications`. AI and routing flags are owned by their extension; no AI integration is claimed by the core backend.
+
+### Extension hooks
+
+Import `register_step` from `app.pipeline.orchestrator` (also available in `app.pipeline.hooks`). `register_step("after_fields", fn)` runs after claims are persisted and before integrity/source checks; `register_step("after_rules", fn)` runs after rule evaluation and reconciliation. Each function receives `(conn, job_id, document_or_application, stage)` inside a write transaction. Use `stage(code, text, progress)` with the provided connection; do not open a nested write transaction. Register steps at module import through the AI route/feature import in `main.py` so supervised subprocesses load them too. Registration order is preserved, and empty registries preserve deterministic outcomes.
+
+`app.features.register_system_extra("ai", callable)` adds an entry to `SystemOut.extras`. The callable returns JSON-compatible data and must omit secrets. Core migrations occupy `0002`–`0007`; AI migrations remain `0050`–`0099`.
+
+### Finding example
 
 ```json
 {

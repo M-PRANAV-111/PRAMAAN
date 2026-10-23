@@ -36,8 +36,16 @@ def load_document(c: sqlite3.Connection, p: Principal, document_id: str) -> tupl
     return doc, app
 
 
-def document_out(d: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
+def document_out(d: sqlite3.Row | dict[str, Any], c: sqlite3.Connection | None = None) -> dict[str, Any]:
+    if c is None:
+        from ..db import reader
+        with reader() as conn:
+            return document_out(d, conn)
+    version = c.execute('SELECT COUNT(*) FROM documents WHERE application_id=? AND doc_type=? AND '
+                        '(uploaded_at < ? OR (uploaded_at = ? AND rowid <= (SELECT rowid FROM documents WHERE id=?)))',
+                        (d['application_id'], d['doc_type'], d['uploaded_at'], d['uploaded_at'], d['id'])).fetchone()[0]
     return {
+        "version": max(1, version),
         "id": d["id"], "doc_type": d["doc_type"], "doc_type_label": DOC_TYPES.get(d["doc_type"], d["doc_type"]),
         "detected_type": d["detected_type"], "original_name": d["original_name"], "sha256": d["sha256"],
         "size_bytes": d["size_bytes"], "mime": d["mime"], "pages": d["pages"], "has_text_layer": bool(d["has_text_layer"]),
@@ -47,7 +55,9 @@ def document_out(d: sqlite3.Row | dict[str, Any]) -> dict[str, Any]:
 
 
 def job_out(j: sqlite3.Row) -> dict[str, Any]:
-    return {k: j[k] for k in ("id", "kind", "state", "stage", "progress", "error", "document_id", "application_id")}
+    from ..pipeline.hooks import STAGE_CODES
+    return {**{k: j[k] for k in ("id", "kind", "state", "stage", "progress", "error", "document_id", "application_id")},
+            "stage_code": j['stage_code'] or STAGE_CODES.get(j["stage"]), "error_message": j['error_message']}
 
 
 def application_summary(c: sqlite3.Connection, a: sqlite3.Row) -> dict[str, Any]:
@@ -97,4 +107,11 @@ def finding_out(c: sqlite3.Connection, f: sqlite3.Row, p: Principal) -> dict[str
         "remedy": f["remedy"], "fix_doc_type": f["fix_doc_type"], "action_owner": f["action_owner"], "advisory": True,
         "clause_status": clause_status, "proof": proof, "evidence": evidence, "created_at": f["created_at"],
         "resolved_at": f["resolved_at"], "reviews": reviews,
+        "responses": response_rows(c, f['id']),
     }
+
+
+def response_rows(c, finding_id):
+    return [{k:r[k] for k in ('id','author_name','text','document_id','created_at')} for r in c.execute(
+        'SELECT r.*,u.name author_name FROM finding_responses r JOIN users u ON u.id=r.author_id '
+        'WHERE finding_id=? ORDER BY r.created_at,r.rowid',(finding_id,))]

@@ -17,3 +17,7 @@ cryptography==50.0.1
 # Synthetic data generator, benchmark and tests
 reportlab==5.0.1
 requests==2.34.2
+# Optional S3-compatible backups only (imported inside scripts.backup.s3_client).
+boto3>=1.35,<2
+# Optional error reporting only (imported when SENTRY_DSN is configured).
+sentry-sdk>=2,<3

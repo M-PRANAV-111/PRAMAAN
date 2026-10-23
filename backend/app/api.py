@@ -16,7 +16,8 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from .security import Principal, decode_token
+from .security import Principal
+from .sessions import authenticate, client_ip
 
 log = logging.getLogger("pramaan.api")
 SESSION_COOKIE = "pramaan_session"
@@ -76,7 +77,7 @@ class RouteSpec:
     response: Any
     status: int
     multipart: bool
-    raw: bool
+    raw: bool | str
     query: dict[str, str]
 
 
@@ -85,7 +86,7 @@ REGISTRY: list[RouteSpec] = []
 
 def route(method: str, path: str, *, summary: str, tag: str, response: Any = None, body: type[BaseModel] | None = None,
           roles: tuple[str, ...] | None = None, public: bool = False, status: int = 200, multipart: bool = False,
-          raw: bool = False, query: dict[str, str] | None = None) -> Callable[[Callable[[Ctx], Any]], Callable[[Ctx], Any]]:
+          raw: bool | str = False, query: dict[str, str] | None = None) -> Callable[[Callable[[Ctx], Any]], Callable[[Ctx], Any]]:
     def deco(fn: Callable[[Ctx], Any]) -> Callable[[Ctx], Any]:
         REGISTRY.append(RouteSpec(method, path, fn, summary, tag, roles, public, body, response, status, multipart, raw,
                                   query or {}))
@@ -97,10 +98,10 @@ def principal_from_request(request: Request) -> tuple[Principal | None, bool]:
     """Returns (principal, via_cookie)."""
     auth = request.headers.get("authorization", "")
     if auth.lower().startswith("bearer "):
-        return decode_token(auth[7:].strip()), False
+        return authenticate(auth[7:].strip()), False
     token = request.cookies.get(SESSION_COOKIE)
     if token:
-        return decode_token(token), True
+        return authenticate(token), True
     return None, False
 
 
@@ -144,7 +145,9 @@ def _make_endpoint(spec: RouteSpec) -> Callable[[Request], Any]:
     async def endpoint(request: Request) -> Response:
         from .config import get_settings
         try:
-            principal, via_cookie = principal_from_request(request)
+            request.state.route_template = spec.path
+            principal, via_cookie = await run_in_threadpool(principal_from_request, request)
+            request.state.user_id = principal.user_id if principal else None
             if not spec.public:
                 if principal is None:
                     raise ApiError(401, "unauthenticated", "Sign in to continue")
@@ -154,7 +157,7 @@ def _make_endpoint(spec: RouteSpec) -> Callable[[Request], Any]:
                 raise ApiError(403, "csrf", "Missing anti-forgery header")
             ctx = Ctx(request=request, principal=principal, path=dict(request.path_params),
                       query={k: v for k, v in request.query_params.items()},
-                      client_ip=request.client.host if request.client else "unknown")
+                      client_ip=client_ip(request))
             if spec.body is not None:
                 raw = await request.body()
                 if len(raw) > MAX_JSON_BYTES:
@@ -170,8 +173,11 @@ def _make_endpoint(spec: RouteSpec) -> Callable[[Request], Any]:
             return _serialize(spec, result)
         except ApiError as e:
             return error_response(e.status, e.code, e.message, e.details)
-        except Exception:  # never leak internals
-            log.exception("unhandled error on %s %s", spec.method, spec.path)
+        except Exception as exc:  # never log document contents, tokens or provider response bodies
+            log.error("unhandled error method=%s route=%s code=%s", spec.method, spec.path, type(exc).__name__)
+            if get_settings().sentry_dsn:
+                import sentry_sdk
+                sentry_sdk.capture_exception(exc)
             return error_response(500, "internal_error", "Something went wrong. The incident has been logged.")
     endpoint.__name__ = spec.handler.__name__
     return endpoint

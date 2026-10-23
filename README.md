@@ -197,8 +197,6 @@ Seven-minute script with the synthetic scenarios (clean bundle, planted defects,
 pyHanko signature validation with CCA trust roots · DigiLocker requester adapter after onboarding · PostgreSQL + Redis worker · layout-model extraction evaluated on authorized samples · rule-pack diff view · alerts · Indic OCR.
 
 ## Research and attribution
-Slides and references: [docs/SIH_6_SLIDES.md](docs/SIH_6_SLIDES.md), [docs/RESEARCH_REFERENCES.md](docs/RESEARCH_REFERENCES.md). Requirements traceability: [docs/REQUIREMENTS_MATRIX.md](docs/REQUIREMENTS_MATRIX.md). Third-party components and font licences: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-=======
+
 # PRAMAAN
-SMART INDIA HACKATHON 2026 SIH26261
->>>>>>> a3c907f918d0293ccf760956bb7da44c8bdd4b72
+

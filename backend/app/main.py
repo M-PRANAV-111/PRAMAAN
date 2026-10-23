@@ -1,6 +1,7 @@
 """ASGI application factory."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 import uuid
@@ -17,11 +18,15 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from . import api
+from . import observability
+from .instance_lock import instance_lock
+from .backup_schedule import start_schedule
 from .config import get_settings
 from .db import migrate, transaction
 from .pipeline.orchestrator import worker
 from .rulepacks import install_from_files
 from .routes import applications, auth, documents, oversight, system  # noqa: F401 — registers routes
+from .routes import accounts, admin, notifications, tracking, reports  # noqa: F401
 
 log = logging.getLogger("pramaan")
 
@@ -48,8 +53,7 @@ class SecurityHeaders(BaseHTTPMiddleware):
             h.setdefault("Cache-Control", "no-store")
         h["X-Request-ID"] = rid
         # Structured access log: method, route, status, timing — no bodies, no query values, no cookies.
-        log.info("request id=%s method=%s path=%s status=%s ms=%.1f", rid, request.method, request.url.path,
-                 response.status_code, (time.perf_counter() - start) * 1000)
+        observability.record_request(request,response,rid,(time.perf_counter()-start)*1000)
         return response
 
 
@@ -73,20 +77,31 @@ def _spa_routes(dist: Path) -> list:
 
 
 def bootstrap() -> None:
+    from .security import dummy_verify
+    dummy_verify('startup timing warmup')
     migrate()
     with transaction() as c:
+        if get_settings().env == 'production' and c.execute("SELECT 1 FROM users WHERE email LIKE '%.synthetic.in' LIMIT 1").fetchone():
+            raise RuntimeError('Synthetic demo accounts are forbidden in production')
         install_from_files(c)
 
 
 def create_app() -> Starlette:
     s = get_settings()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    observability.configure()
 
     @asynccontextmanager
     async def lifespan(app: Starlette):
-        bootstrap()
-        worker.start()
-        yield
+        with instance_lock(s.data_dir):
+            bootstrap()
+            worker.start()
+            stop=start_schedule()
+            try:
+                yield
+            finally:
+                stop.set()
+                await asyncio.to_thread(worker.stop)
 
     routes = api.starlette_routes()
 
@@ -99,7 +114,9 @@ def create_app() -> Starlette:
     middleware = [Middleware(SecurityHeaders)]
     if s.cors_origins:
         middleware.append(Middleware(CORSMiddleware, allow_origins=s.cors_origins, allow_credentials=True,
-                                     allow_methods=["GET", "POST"], allow_headers=["content-type", "x-requested-with"]))
+                                     allow_methods=["GET", "POST", "PATCH", "DELETE"],
+                                     allow_headers=["content-type", "x-requested-with", "idempotency-key", "authorization"],
+                                     expose_headers=["X-Total-Count", "X-Request-ID"]))
     return Starlette(routes=routes, middleware=middleware, lifespan=lifespan)
 
 

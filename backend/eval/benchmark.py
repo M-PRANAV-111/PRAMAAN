@@ -118,7 +118,7 @@ def main() -> None:
         inst = g.Inst(f"Benchmark Institute {n} (Synthetic)", pid)
         with transaction() as c:
             iid, uid = new_id("ins"), new_id("usr")
-            c.execute("INSERT INTO institutions VALUES (?,?,?,?,?,?)", (iid, pid, inst.name, "Synthetic", f"Trust {n}", now_iso()))
+            c.execute("INSERT INTO institutions (id,aicte_permanent_id,name,state,trust_name,created_at) VALUES (?,?,?,?,?,?)", (iid, pid, inst.name, "Synthetic", f"Trust {n}", now_iso()))
             c.execute("INSERT INTO aicte_records VALUES (?,?,?,?,1)", (iid, intake, "2025-26", "{}"))
             c.execute("INSERT INTO users (id, email, name, role, institution_id, password_hash, created_at) VALUES"
                       " (?,?,?,?,?,?,?)", (uid, f"b{n}@bench.synthetic", "bench", "INSTITUTION", iid, "x", now_iso()))

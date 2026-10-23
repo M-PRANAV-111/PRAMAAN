@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import io
+import re
+from datetime import datetime, timedelta, timezone
 
 from PIL import Image, ImageOps
 from starlette.responses import Response
@@ -8,7 +10,7 @@ from starlette.responses import Response
 from .. import audit
 from ..api import ApiError, Ctx, not_found, route
 from ..config import get_settings
-from ..db import loads, new_id, now_iso, reader, transaction
+from ..db import dumps, loads, new_id, now_iso, reader, transaction
 from ..pipeline.doctypes import DOC_TYPES
 from ..pipeline.extract import render_page
 from ..pipeline.intake import IntakeError, validate_upload
@@ -25,6 +27,17 @@ from .common import document_out, job_out, load_application, load_document
 def upload_document(ctx: Ctx):
     s = get_settings()
     p = ctx.user
+    key = ctx.request.headers.get('idempotency-key')
+    if key is not None and not re.fullmatch(r'[!-~]{1,200}',key):
+        raise ApiError(422,'validation_error','Idempotency-Key must contain 1–200 visible ASCII characters')
+    cutoff = (datetime.now(timezone.utc)-timedelta(hours=24)).isoformat(timespec='seconds')
+    with reader() as c:
+        load_application(c,p,ctx.path['application_id'])
+        if key:
+            cached = c.execute('SELECT response_json FROM idempotency_keys WHERE key=? AND user_id=? AND application_id=? AND created_at>?',
+                               (key,p.user_id,ctx.path['application_id'],cutoff)).fetchone()
+            if cached:
+                return loads(cached['response_json'])
     if not rate_limiter.allow(f"upload:{p.user_id}", s.upload_rate_per_minute):
         raise ApiError(429, "rate_limited", "Too many uploads. Wait a minute and try again.")
     doc_type = ctx.form.get("doc_type", "")
@@ -42,6 +55,11 @@ def upload_document(ctx: Ctx):
     doc_id = new_id("doc")
     with transaction() as c:
         a = load_application(c, p, ctx.path["application_id"])
+        if key:
+            cached = c.execute('SELECT response_json FROM idempotency_keys WHERE key=? AND user_id=? AND application_id=? AND created_at>?',
+                               (key,p.user_id,a['id'],cutoff)).fetchone()
+            if cached:
+                return loads(cached['response_json'])
         previous = c.execute("SELECT id FROM documents WHERE application_id = ? AND doc_type = ? AND superseded_by IS NULL",
                              (a["id"], doc_type)).fetchall()
         c.execute(
@@ -56,11 +74,18 @@ def upload_document(ctx: Ctx):
         audit.record(c, p, "document.uploaded", "document", doc_id,
                      {"doc_type": doc_type, "sha256": sha, "size": len(ctx.file.data),
                       "replaces": [r["id"] for r in previous]}, a["id"])
+        if key:
+            first_response = UploadResponse(document=document_out(c.execute('SELECT * FROM documents WHERE id=?',(doc_id,)).fetchone(),c),
+                                            job=job_out(c.execute('SELECT * FROM jobs WHERE id=?',(job_id,)).fetchone())).model_dump(mode='json')
+            c.execute('DELETE FROM idempotency_keys WHERE created_at<=?',(cutoff,))
+            c.execute('INSERT INTO idempotency_keys VALUES (?,?,?,?,?)',(key,p.user_id,a['id'],dumps(first_response),now_iso()))
     worker.submit(job_id)
+    if key:
+        return first_response
     with reader() as c:
         d = c.execute("SELECT * FROM documents WHERE id = ?", (doc_id,)).fetchone()
         j = c.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
-        return {"document": document_out(d), "job": job_out(j)}
+        return {"document": document_out(d,c), "job": job_out(j)}
 
 
 @route("GET", "/api/v1/jobs/{job_id}", summary="Processing job status", tag="documents", response=JobOut)
@@ -89,7 +114,7 @@ def document_evidence(ctx: Ctx):
                 for r in c.execute("SELECT * FROM verifications WHERE document_id = ? ORDER BY tier", (d["id"],))]
         integ = [{"kind": r["kind"], "page": r["page"], "bbox": loads(r["bbox_json"]), **loads(r["detail_json"], {})}
                  for r in c.execute("SELECT * FROM integrity_signals WHERE document_id = ?", (d["id"],))]
-        return {"document": document_out(d), "claims": claims, "verifications": vers, "integrity": integ,
+        return {"document": document_out(d,c), "claims": claims, "verifications": vers, "integrity": integ,
                 "extraction": loads(d["extraction_json"])}
 
 
