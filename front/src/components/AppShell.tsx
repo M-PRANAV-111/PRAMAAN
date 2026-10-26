@@ -64,7 +64,7 @@ const NAV: NavItem[] = [
   { to: "/benchmark", label: "Benchmark", roles: ["OFFICER", "ADMIN", "AUDITOR"] },
   { to: "/admin/registrations", label: "Registrations", roles: ["ADMIN"], gate: () => hasEndpoint("listRegistrations") },
   { to: "/admin/users", label: "Users", roles: ["ADMIN"], gate: () => hasEndpoint("listUsers") },
-  { to: "/admin/system", label: "System", roles: ["ADMIN"], gate: () => hasEndpoint("aiStatus") || hasEndpoint("adminSystem") },
+  { to: "/admin/system", label: "System", roles: ["ADMIN"], gate: () => hasEndpoint("aiStatus") || hasEndpoint("systemStatus") },
   { to: "/account", label: "Account", roles: ["INSTITUTION", "OFFICER", "ADMIN", "AUDITOR"], gate: () => hasEndpoint("getAccount") || hasEndpoint("changePassword") },
   { to: "/help", label: "Help", roles: ["INSTITUTION", "OFFICER", "ADMIN", "AUDITOR"] },
 ];
@@ -90,8 +90,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, []);
 
   const unread = useQuery(
-    user && features.notifications && hasEndpoint("unreadNotificationsCount") ? "notifications:unread" : null,
-    () => callEndpoint<{ count: number }>("unreadNotificationsCount"),
+    user && features.notifications && hasEndpoint("unreadCount") ? "notifications:unread" : null,
+    () => callEndpoint<{ count: number }>("unreadCount"),
     { refetchMs: 30_000 },
   );
 

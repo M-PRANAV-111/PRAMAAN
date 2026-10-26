@@ -80,21 +80,13 @@ with sync_playwright() as p:
     pg.wait_for_timeout(400)
     check("/register renders h1 heading cleanly", pg.get_by_role("heading", name="Register your institution").is_visible())
 
-    test_email = "new.applicant@sih2026.synthetic.in"
-    pg.get_by_label("Nodal officer name").fill("Dr. Kavita Nair")
-    pg.get_by_label("Official email").fill(test_email)
+    # Registration lifecycle is covered by e2e_register.py using real outbox/admin UI.
+    pg.goto(base + "/login")
+    pg.get_by_label("Email", exact=True).fill("nodal@deccan.synthetic.in")
     pg.get_by_label("Password", exact=True).fill(pw)
-    pg.get_by_label("Confirm password").fill(pw)
-    pg.get_by_label("Institution name").fill("Cauvery Institute of Engineering (Synthetic)")
-    pg.get_by_role("button", name="Register institution").click()
-    pg.wait_for_timeout(800)
-    check("registration completes and shows Account created", pg.get_by_role("heading", name="Account created").is_visible())
-    pg.screenshot(path=out / "accounts-register.png")
-
-    pg.get_by_role("button", name="Open Applicant Dashboard").click()
+    pg.get_by_role("button", name="Sign in", exact=True).click()
     pg.wait_for_url("**/institution**")
-    pg.wait_for_timeout(500)
-    check("registered applicant opens Applicant Dashboard", "/institution" in pg.url and pg.get_by_text("Cauvery Institute of Engineering (Synthetic)").first.is_visible())
+    check("real seeded applicant opens dashboard", "/institution" in pg.url)
 
     # Verify 10-section Applicant Portal navigation bar
     sec_nav = pg.get_by_role("navigation", name="Applicant portal sections")
@@ -108,12 +100,12 @@ with sync_playwright() as p:
     pg.wait_for_timeout(400)
     pg.goto(base + "/login")
     pg.wait_for_timeout(400)
-    pg.get_by_label("Email").fill(test_email)
+    pg.get_by_label("Email").fill("nodal@deccan.synthetic.in")
     pg.get_by_label("Password", exact=True).fill(pw)
     pg.get_by_role("button", name="Sign in", exact=True).click()
     pg.wait_for_url("**/institution**")
     pg.wait_for_timeout(500)
-    check("signing in with newly registered applicant credentials opens /institution", "/institution" in pg.url)
+    check("signing in with real seeded applicant credentials opens /institution", "/institution" in pg.url)
     pg.get_by_role("button", name="Sign out").click()
     pg.wait_for_timeout(400)
 

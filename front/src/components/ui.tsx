@@ -45,12 +45,12 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 
 export function ErrorBox({ error, retry }: { error: unknown; retry?: () => void }) {
   const message = error instanceof ApiError
-    ? (error.status === 429 ? "Too many requests in a short time. Wait a moment and try again." : error.message)
+    ? ({ 403: "Your role cannot open this page", 404: "This page does not exist", 429: "Too many attempts. Wait a minute." }[error.status] ?? error.message)
     : "Something went wrong while loading this page.";
   return (
     <div role="alert" className="flex flex-wrap items-center gap-3 rounded-sm border-l-4 border-tape bg-tape-wash px-4 py-3 text-sm">
       <span className="font-semibold text-tape">{message}</span>
-      {retry && <button className="btn btn-quiet" onClick={retry}>Try again</button>}
+      {retry && <button className="btn btn-quiet" onClick={retry}>Retry</button>}
     </div>
   );
 }

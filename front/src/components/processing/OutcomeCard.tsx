@@ -6,7 +6,7 @@ import { Pill } from "../ui";
 
 type RoutingOut = {
   outcome: "READY_FOR_SCRUTINY" | "DEFICIENCIES_FLAGGED" | "MANUAL_REVIEW_REQUIRED";
-  reasons: string[];
+  reasons: { text: string; link: string }[];
 };
 
 export function OutcomeCard({
@@ -35,7 +35,7 @@ export function OutcomeCard({
     app.counts.deficiencies > 0 ? `${plural(app.counts.deficiencies, "deficiency", "deficiencies")} raised by Handbook rules.` : null,
     app.counts.reviews > 0 ? `${plural(app.counts.reviews, "item")} routed for official review.` : null,
     app.counts.active === 0 ? "All evaluated rules passed and no integrity indicator was raised." : null,
-  ].filter(Boolean) as string[];
+  ].filter(Boolean).map(text => ({ text: text as string, link: "" }));
 
   return (
     <div data-outcome-card className="rounded-sm border border-rule bg-paper p-4 text-sm animate-rise">
@@ -46,7 +46,7 @@ export function OutcomeCard({
       <p className="mt-2 font-semibold">{meta.lead}</p>
       {reasons.length > 0 && (
         <ul className="mt-1.5 grid gap-1 text-xs text-ink-soft">
-          {reasons.map((r, i) => <li key={i}>• {r}</li>)}
+          {reasons.map((r, i) => <li key={i}>• {r.link ? <a className="underline" href={r.link}>{r.text}</a> : r.text}</li>)}
         </ul>
       )}
       <div className="mt-3 flex flex-wrap gap-2">

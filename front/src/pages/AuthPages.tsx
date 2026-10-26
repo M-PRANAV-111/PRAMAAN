@@ -3,11 +3,11 @@ import { ApiError } from "../api/client";
 import { PageHeader } from "../components/AppShell";
 import { BlockWordmark } from "../components/BlockWordmark";
 import { ErrorBox, Pill, Skeleton, useToast } from "../components/ui";
-import { callEndpoint, hasEndpoint } from "../lib/features";
+import { callEndpoint, hasEndpoint, useFeatures } from "../lib/features";
 import { fmtDate } from "../lib/format";
 import { invalidate, useQuery } from "../lib/query";
-import { Link, navigate, useQueryParam } from "../lib/router";
-import { registerDemoApplicant, ROLE_LABEL, useSession } from "../lib/session";
+import { Link, useQueryParam } from "../lib/router";
+import { ROLE_LABEL, useSession } from "../lib/session";
 
 function AuthShell({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -29,36 +29,30 @@ function AuthShell({ title, children }: { title: string; children: ReactNode }) 
 }
 
 export function RegisterPage() {
-  const { signIn } = useSession();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [instName, setInstName] = useState("");
-  const [permId, setPermId] = useState("1-SYN-7742-0004");
-  const [stateName, setStateName] = useState("Telangana");
-  const [trust, setTrust] = useState("Deccan Learning Foundation");
+  const [permId, setPermId] = useState("");
+  const [stateName, setStateName] = useState("");
+  const [trust, setTrust] = useState("");
   const [consent, setConsent] = useState(true);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const isDemo = !hasEndpoint("register");
+  const { features } = useFeatures();
 
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
+    if (password.length < 12) { setError("Password must be at least 12 characters."); return; }
     if (password !== confirm) { setError("Passwords do not match."); return; }
     if (!consent) { setError("Confirm synthetic data consent."); return; }
     setPending(true);
     try {
       const cleanEmail = email.trim().toLowerCase();
-      if (!isDemo) {
-        await callEndpoint("register", { body: { name, email: cleanEmail, password, institution_name: instName, aicte_permanent_id: permId, state: stateName, trust_name: trust } });
-      } else {
-        registerDemoApplicant({ name, email: cleanEmail, password, institution_name: instName, aicte_permanent_id: permId, state: stateName, trust_name: trust });
-        await signIn(cleanEmail, password);
-      }
+      await callEndpoint("register", { body: { name, email: cleanEmail, password, institution: { name: instName, aicte_permanent_id: permId, state: stateName, trust_name: trust }, accept_terms: true } });
       setDone(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not submit registration.");
@@ -67,14 +61,11 @@ export function RegisterPage() {
 
   if (done) {
     return (
-      <AuthShell title="Account created">
+      <AuthShell title="Registration received">
         <p className="text-sm text-ink-soft">
-          {isDemo
-            ? `Your applicant account (${email.trim().toLowerCase()}) is created via the local development adapter and connected to the live workspace.`
-            : "Verification link sent. An AICTE administrator reviews new institution registrations."}
+          If these details can be registered, a verification link will be sent. An administrator reviews verified registrations.
         </p>
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn btn-primary" onClick={() => navigate("/institution")}>Open Applicant Dashboard</button>
           <Link to="/login" className="btn btn-quiet">Return to sign in</Link>
         </div>
       </AuthShell>
@@ -84,14 +75,14 @@ export function RegisterPage() {
   return (
     <AuthShell title="Register your institution">
       <p className="text-sm text-ink-soft">For applicant / institution nodal officers. Create an account with your email and institution details.</p>
-      {isDemo && <p className="rounded-sm bg-dusk-wash px-3 py-2 text-xs font-medium text-dusk">Development demo adapter: accounts registered here are saved in this browser and backed by the live synthetic institution session.</p>}
+
       {error && <p role="alert" className="border-l-4 border-tape bg-tape-wash px-3 py-2 text-sm font-semibold text-tape">{error}</p>}
       <form onSubmit={submit} className="grid gap-3">
         <label className="field"><span>Nodal officer name</span><input className="input" required value={name} onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)} /></label>
         <label className="field"><span>Official email</span><input className="input" type="email" required value={email} onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} /></label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="field"><span>Password</span><input className="input" type="password" minLength={8} required value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} /></label>
-          <label className="field"><span>Confirm password</span><input className="input" type="password" minLength={8} required value={confirm} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)} /></label>
+          <label className="field"><span>Password</span><input className="input" type="password" minLength={12} required value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} /></label>
+          <label className="field"><span>Confirm password</span><input className="input" type="password" minLength={12} required value={confirm} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirm(e.target.value)} /></label>
         </div>
         <label className="field"><span>Institution name</span><input className="input" required value={instName} onChange={(e: ChangeEvent<HTMLInputElement>) => setInstName(e.target.value)} /></label>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -103,7 +94,7 @@ export function RegisterPage() {
           <input type="checkbox" className="mt-0.5" checked={consent} onChange={(e: ChangeEvent<HTMLInputElement>) => setConsent(e.target.checked)} required />
           <span>I understand this demo uses synthetic documents only.</span>
         </label>
-        <button className="btn btn-primary" disabled={pending}>{pending ? "Submitting…" : "Register institution"}</button>
+        <button className="btn btn-primary" disabled={pending || !features.registration}>{pending ? "Submitting…" : "Register institution"}</button>
       </form>
     </AuthShell>
   );
@@ -129,13 +120,14 @@ export function VerifyEmailPage() {
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   async function submit(e: FormEvent) {
     e.preventDefault();
-    try { await callEndpoint("forgotPassword", { body: { email: email.trim().toLowerCase() } }); } catch { /* neutral */ }
-    setSent(true);
+    try { await callEndpoint("forgotPassword", { body: { email: email.trim().toLowerCase() } }); setSent(true); } catch (err) { setError(err); }
   }
   return (
     <AuthShell title="Reset your password">
+      {!!error && <ErrorBox error={error} />}
       {sent ? <><p className="text-sm text-ink-soft">If an account exists for that email address, a reset link has been sent.</p><Link to="/login" className="btn btn-primary">Back to sign in</Link></> : (
         <form onSubmit={submit} className="grid gap-4">
           <label className="field"><span>Email</span><input className="input" type="email" required value={email} onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} /></label>
@@ -155,7 +147,7 @@ function TokenPasswordForm({ title, endpoint, btn }: { title: string; endpoint: 
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (pw.length < 12 || pw !== confirm) { setError("Passwords must match and be ≥ 12 characters."); return; }
-    try { await callEndpoint(endpoint, { body: { token, password: pw } }); setDone(true); }
+    try { await callEndpoint(endpoint, { body: endpoint === "resetPassword" ? { token, new_password: pw } : { token, password: pw } }); setDone(true); }
     catch (err) { setError(err instanceof ApiError ? err.message : "Action failed."); }
   }
   return (
@@ -176,11 +168,11 @@ export const ResetPasswordPage = () => <TokenPasswordForm title="Choose a new pa
 export const AcceptInvitationPage = () => <TokenPasswordForm title="Accept invitation" endpoint="acceptInvitation" btn="Activate account" />;
 
 export function AccountPage() {
-  const { user } = useSession();
+  const { user, staySignedIn } = useSession();
   const toast = useToast();
   const canSessions = hasEndpoint("listSessions");
   const sessions = useQuery(canSessions ? "account:sessions" : null,
-    () => callEndpoint<{ id: string; user_agent?: string; ip?: string; last_active_at?: string; current?: boolean }[]>("listSessions"));
+    () => callEndpoint<{ id: string; user_agent?: string; ip?: string; last_seen_at?: string; current?: boolean }[]>("listSessions"));
   const [curPw, setCurPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [pwErr, setPwErr] = useState<string | null>(null);
@@ -191,7 +183,7 @@ export function AccountPage() {
     setPwErr(null);
     try {
       await callEndpoint("changePassword", { body: { current_password: curPw, new_password: newPw } });
-      setCurPw(""); setNewPw(""); toast("Password updated");
+      setCurPw(""); setNewPw(""); invalidate("account:sessions"); toast("Password updated");
     } catch (err) { setPwErr(err instanceof ApiError ? err.message : "Could not change password."); }
   }
 
@@ -223,12 +215,16 @@ export function AccountPage() {
       {canSessions && (
         <section className="mt-8">
           <h2 className="mb-3 text-xl">Active sessions</h2>
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button className="btn btn-quiet" onClick={async () => { await staySignedIn(); invalidate("account:sessions"); toast("Session refreshed"); }}>Refresh this session</button>
+            <button className="btn btn-quiet" onClick={async () => { try { await callEndpoint("revokeOtherSessions"); invalidate("account:sessions"); toast("Other sessions revoked"); } catch (error) { toast(error instanceof ApiError ? error.message : "Could not revoke sessions. Try again.", "error"); } }}>Revoke other sessions</button>
+          </div>
           {sessions.error ? <ErrorBox error={sessions.error} retry={sessions.refetch} /> : !sessions.data ? <Skeleton /> : (
             <ul className="grid gap-2 text-sm">
               {sessions.data.map((s) => (
                 <li key={s.id} className="sheet flex flex-wrap items-center justify-between gap-3 p-4">
-                  <span>{s.user_agent ?? "Session"} · {fmtDate(s.last_active_at, true)}</span>
-                  {!s.current && hasEndpoint("revokeSession") && <button className="btn btn-quiet text-xs" onClick={async () => { await callEndpoint("revokeSession", { path: { session_id: s.id } }); invalidate("account:sessions"); }}>Revoke</button>}
+                  <span>{s.user_agent ?? "Session"} · {fmtDate(s.last_seen_at, true)}</span>
+                  {!s.current && hasEndpoint("revokeSession") && <button className="btn btn-quiet text-xs" onClick={async () => { try { await callEndpoint("revokeSession", { path: { session_id: s.id } }); invalidate("account:sessions"); } catch (error) { toast(error instanceof ApiError ? error.message : "Could not revoke session. Try again.", "error"); } }}>Revoke</button>}
                 </li>
               ))}
             </ul>

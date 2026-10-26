@@ -56,8 +56,15 @@ def document_out(d: sqlite3.Row | dict[str, Any], c: sqlite3.Connection | None =
 
 def job_out(j: sqlite3.Row) -> dict[str, Any]:
     from ..pipeline.hooks import STAGE_CODES
+    from ..db import reader
+    with reader() as c:
+        history = [r['stage_code'] for r in c.execute('SELECT stage_code FROM job_stage_durations WHERE job_id=? ORDER BY rowid',(j['id'],))]
+        notes = ['AI step skipped: '+r['reason'] for r in c.execute('SELECT reason FROM ai_job_notes WHERE job_id=? ORDER BY reason',(j['id'],))]
+    code = j['stage_code'] or STAGE_CODES.get(j['stage'])
+    if code and (not history or history[-1] != code):
+        history.append(code)
     return {**{k: j[k] for k in ("id", "kind", "state", "stage", "progress", "error", "document_id", "application_id")},
-            "stage_code": j['stage_code'] or STAGE_CODES.get(j["stage"]), "error_message": j['error_message']}
+            "stage_code": code, "error_message": j['error_message'], 'stage_history':history, 'ai_notes':notes}
 
 
 def application_summary(c: sqlite3.Connection, a: sqlite3.Row) -> dict[str, Any]:
@@ -101,7 +108,9 @@ def finding_out(c: sqlite3.Connection, f: sqlite3.Row, p: Principal) -> dict[str
                for r in c.execute("SELECT rv.*, u.name, u.role FROM reviews rv JOIN users u ON u.id = rv.reviewer_id"
                                   " WHERE rv.finding_id = ? ORDER BY rv.created_at", (f["id"],))]
     clause_status = (proof.get("rule") or {}).get("clause", {}).get("status") if isinstance(proof.get("rule"), dict) else None
+    checked = c.execute('SELECT * FROM ai_explanations WHERE finding_id=? AND template_text=?',(f['id'],f['explanation'])).fetchone()
     return {
+        'explanation_source': 'ai_checked' if checked else 'template', 'ai_assisted':bool(checked),
         "id": f["id"], "application_id": f["application_id"], "source_kind": f["source_kind"], "rule_id": f["rule_id"],
         "title": f["title"], "severity": f["severity"], "state": f["state"], "explanation": f["explanation"],
         "remedy": f["remedy"], "fix_doc_type": f["fix_doc_type"], "action_owner": f["action_owner"], "advisory": True,

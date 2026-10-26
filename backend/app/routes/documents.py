@@ -114,7 +114,8 @@ def document_evidence(ctx: Ctx):
                 for r in c.execute("SELECT * FROM verifications WHERE document_id = ? ORDER BY tier", (d["id"],))]
         integ = [{"kind": r["kind"], "page": r["page"], "bbox": loads(r["bbox_json"]), **loads(r["detail_json"], {})}
                  for r in c.execute("SELECT * FROM integrity_signals WHERE document_id = ?", (d["id"],))]
-        return {"document": document_out(d,c), "claims": claims, "verifications": vers, "integrity": integ,
+        suggestions = [dict(r) for r in c.execute('SELECT field,value,page,reason,model FROM ai_suggestions WHERE document_id=? ORDER BY id',(d['id'],))]
+        return {"document": document_out(d,c), "claims": claims, "verifications": vers, "integrity": integ, "ai_suggestions":suggestions,
                 "extraction": loads(d["extraction_json"])}
 
 

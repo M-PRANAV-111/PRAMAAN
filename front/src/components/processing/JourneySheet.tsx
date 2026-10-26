@@ -86,7 +86,7 @@ export function JourneySheet({
               <div className="h-2 w-full rounded-sm bg-rule" />
               <div className="h-2 w-5/6 rounded-sm bg-rule" />
             </div>
-            <div className="text-[9px] uppercase tracking-wider text-ink-faint">SYNTHETIC</div>
+            <div className="text-[9px] text-ink-faint">Loading document preview</div>
           </div>
         )}
         {step === 1 && (
@@ -121,7 +121,7 @@ export function JourneySheet({
                 {claims.slice(0, 6).map((c) => (
                   <li key={c.id} className="flex items-baseline justify-between gap-2 rounded-sm bg-paper px-2 py-1">
                     <span className="truncate font-semibold">{label(c.field)}: {c.value_raw}</span>
-                    <span className="shrink-0 text-[11px] text-ink-soft">p.{c.page} · {Math.round(c.confidence * 100)}%</span>
+                    <span className="shrink-0 text-[11px] text-ink-soft">p.{c.page} · {c.extractor} · {Math.round(c.confidence * 100)}%</span>
                   </li>
                 ))}
               </ul>

@@ -27,7 +27,8 @@ export function Workspace({ id }: { id: string }) {
   const tabParam = useQueryParam("tab") as Tab | null;
   const [tab, setTabState] = useState<Tab>(tabParam ?? (isInstitution ? "documents" : "findings"));
   const setTab = (t: Tab) => { setTabState(t); navigate(`/applications/${id}?tab=${t}`, { replace: true }); };
-  const [selected, setSelected] = useState<string | null>(null);
+  const findingParam = useQueryParam("finding");
+  const [selected, setSelected] = useState<string | null>(findingParam);
   const [journeyState, setJourneyState] = useState<{ job: JobOut; docId: string | null; replacing: boolean } | null>(null);
 
   const detail = useQuery(`application:${id}`, () => api("getApplication", { path: { application_id: id } }));
@@ -88,6 +89,7 @@ export function Workspace({ id }: { id: string }) {
 }
 
 function HeaderActions({ a, isInstitution, onJob }: { a: ApplicationDetail; isInstitution: boolean; onJob?: (job: JobOut) => void }) {
+  const { features } = useFeatures();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
   const [pending, setPending] = useState(false);
@@ -116,14 +118,7 @@ function HeaderActions({ a, isInstitution, onJob }: { a: ApplicationDetail; isIn
         const res = await fetch(`/api/v1/applications/${encodeURIComponent(a.id)}/report`, { credentials: "same-origin", headers: { "X-Requested-With": "pramaan" } });
         if (res.ok) { save(await res.blob(), "pdf"); return; }
       }
-      const lines = [
-        "PRAMAAN — PRELIMINARY VERIFICATION SUMMARY (SYNTHETIC / ADVISORY ONLY)",
-        `Institution: ${a.institution.name} (${a.institution.aicte_permanent_id}, ${a.institution.state})`,
-        `Category: ${a.category_label} · Academic Year: ${a.academic_year} · Status: ${STATUS_META[a.status].label} (Rule pack v${a.rule_pack_version})`,
-        `Documents: ${a.documents_uploaded}/${a.documents_required} · Open Findings: ${a.counts.active} (${a.counts.deficiencies} deficiencies)`,
-        ...a.checklist.map((c) => `- ${c.label}: ${c.document ? `${c.document.original_name} (${c.document.verification_status ?? "Checked"})` : "Not uploaded"}`),
-      ];
-      save(new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }), "txt");
+      throw new Error("Report unavailable");
     } catch {
       toast("Could not download verification report. Try again.", "error");
     }
@@ -141,7 +136,7 @@ function HeaderActions({ a, isInstitution, onJob }: { a: ApplicationDetail; isIn
   }
   return (
     <>
-      <button className="btn btn-quiet" onClick={downloadReport}>Download report</button>
+      {features.reports && <button className="btn btn-quiet" onClick={downloadReport}>Download report</button>}
       <button className="btn btn-quiet" onClick={rerun} disabled={pending || busy || (!isInstitution && !a.submitted_at)}>
         {busy ? <Spinner label="Checking" /> : "Run full check"}
       </button>
@@ -272,13 +267,15 @@ function boxesFor(f: FindingOut, docId: string, active: number, forceTone?: Box[
 function ClarificationReplyForm({ f }: { f: FindingOut }) {
   const toast = useToast();
   const [text, setText] = useState("");
+  const [attachment, setAttachment] = useState("");
+  const documents = useQuery(`application:${f.application_id}`, () => api("getApplication", { path: { application_id: f.application_id } }));
   const [pending, setPending] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   async function submit(e: FormEvent) {
     e.preventDefault();
     setPending(true); setErr(null);
     try {
-      await callEndpoint("respondFinding", { path: { finding_id: f.id }, body: { message: text.trim() } });
+      await callEndpoint("respondToFinding", { path: { finding_id: f.id }, body: { text: text.trim(), document_id: attachment || null } });
       setText("");
       invalidate(`findings:${f.application_id}`);
       toast("Clarification reply recorded");
@@ -293,6 +290,7 @@ function ClarificationReplyForm({ f }: { f: FindingOut }) {
         <textarea className="input" minLength={10} maxLength={2000} required value={text}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setText(e.target.value)} />
       </label>
+      <label className="field"><span>Supporting document (optional)</span><select className="input" value={attachment} onChange={e => setAttachment(e.target.value)}><option value="">No attachment</option>{documents.data?.documents.map(d => <option key={d.id} value={d.id}>{d.original_name}</option>)}</select></label>
       {err && <p role="alert" className="text-xs font-semibold text-tape">{err}</p>}
       <button className="btn btn-primary min-h-8 justify-self-start px-3 text-xs" disabled={pending || text.trim().length < 10}>
         {pending ? "Sending…" : "Send clarification reply"}
@@ -660,11 +658,11 @@ function ActivityTab({ a, id, showAudit }: { a: ApplicationDetail; id: string; s
   const audit = useQuery(showAudit ? `audit:${id}` : null, () => api("listAudit", { query: { application_id: id, limit: "200" } }));
   const apiTimeline = useQuery(
     features.timeline ? `timeline:${id}` : null,
-    () => callEndpoint<{ ts: string; title: string; detail?: string; tone?: string }[]>("applicationTimeline", { path: { application_id: id } }),
+    () => callEndpoint<{ at: string; title: string; detail?: string; tone?: string }[]>("applicationTimeline", { path: { application_id: id } }),
   );
 
   const timeline = useMemo(() => {
-    if (apiTimeline.data) return apiTimeline.data;
+    if (apiTimeline.data) return apiTimeline.data.map(item => ({ ...item, ts: item.at }));
     const items: { ts: string; title: string; detail: string; isDeficiency?: boolean }[] = [
       { ts: a.created_at, title: "Application created", detail: `${a.category_label} (${a.academic_year})` },
     ];
@@ -695,6 +693,7 @@ function ActivityTab({ a, id, showAudit }: { a: ApplicationDetail; id: string; s
       <section className="grid content-start gap-8">
         <div>
           <h2 className="mb-3 text-xl">Application timeline</h2>
+          {apiTimeline.error && <ErrorBox error={apiTimeline.error} retry={apiTimeline.refetch} />}
           <ol className="grid gap-2 text-sm">
             {timeline.map((item, idx) => (
               <li key={idx} className="sheet grid grid-cols-[0.75rem_1fr] items-start gap-3 p-3.5">

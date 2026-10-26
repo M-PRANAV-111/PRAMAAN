@@ -1,4 +1,4 @@
-import { type ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { api, type ApplicationStatus, type DashboardOut } from "../api/client";
 import { PageHeader } from "../components/AppShell";
 import { Empty, ErrorBox, Pill, Skeleton, cx } from "../components/ui";
@@ -52,11 +52,14 @@ export function Queue() {
   const { user } = useSession();
   const filter = (useQueryParam("status") as ApplicationStatus | "ALL" | null) ?? "ALL";
   const q = useQueryParam("q") ?? "";
+  const offset = Math.max(0, Number(useQueryParam("offset")) || 0);
+  const [total, setTotal] = useState(0);
   const sort = (useQueryParam("sort") as SortKey | null) ?? "status";
   const dir = (useQueryParam("dir") as "asc" | "desc" | null) ?? "asc";
 
   function updateParams(patch: Record<string, string | null>) {
     const sp = new URLSearchParams(location.search);
+    if ("q" in patch || "status" in patch) sp.delete("offset");
     for (const [k, v] of Object.entries(patch)) {
       if (!v || v === "ALL" || (k === "sort" && v === "status") || (k === "dir" && v === "asc")) sp.delete(k);
       else sp.set(k, v);
@@ -71,11 +74,11 @@ export function Queue() {
   }
 
   const dash = useQuery("dashboard", () => api("dashboard"), { refetchMs: 15000 });
-  const apps = useQuery("applications", () => api("listApplications"), { refetchMs: 15000 });
-  const needle = q.trim().toLowerCase();
-  const list = (apps.data ?? [])
-    .filter((a) => (filter === "ALL" || a.status === filter) &&
-      (!needle || a.institution.name.toLowerCase().includes(needle) || a.institution.aicte_permanent_id.toLowerCase().includes(needle) || a.institution.state.toLowerCase().includes(needle)))
+  const apps = useQuery(`applications:queue:${q}:${filter}:${offset}`, () => api("listApplications", {
+    query: { q, status: filter === "ALL" ? undefined : filter, limit: "25", offset: String(offset) },
+    onResponse: response => setTotal(Number(response.headers.get("X-Total-Count") ?? 0)),
+  }), { refetchMs: 15000 });
+  const list = [...(apps.data ?? [])]
     .sort((x, y) => {
       const mul = dir === "desc" ? -1 : 1;
       if (sort === "institution") return mul * x.institution.name.localeCompare(y.institution.name);
@@ -92,11 +95,11 @@ export function Queue() {
       {dash.data && <div className="mb-6"><Distribution d={dash.data} /></div>}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by status">
-          {(["ALL", ...ORDER] as const).map((s) => (s === "ALL" || counts[s] > 0) && (
+          {(["ALL", ...ORDER] as const).map((s) => (s === "ALL" || counts[s] > 0 || filter === s) && (
             <button key={s} onClick={() => updateParams({ status: s })} aria-pressed={filter === s}
               className={cx("rounded-full px-3 py-1.5 text-sm font-semibold transition-colors",
                 filter === s ? "bg-ink text-paper" : "bg-sheet text-ink-soft shadow-[inset_0_0_0_1px_var(--color-rule-strong)] hover:text-ink")}>
-              {s === "ALL" ? `All (${apps.data?.length ?? 0})` : `${STATUS_META[s].label} (${counts[s]})`}
+              {s === "ALL" ? `All` : `${STATUS_META[s].label} (${counts[s]})`}
             </button>
           ))}
         </div>
@@ -105,6 +108,13 @@ export function Queue() {
           <input type="search" className="input min-h-9 w-64 text-sm" placeholder="Search institution or Permanent ID…"
             value={q} onChange={(e: ChangeEvent<HTMLInputElement>) => updateParams({ q: e.target.value })} />
         </label>
+      </div>
+      <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+        <span>{total} matching applications</span>
+        <div className="flex gap-2">
+          <button className="btn btn-quiet" disabled={offset === 0} onClick={() => updateParams({ offset: String(Math.max(0, offset - 25)) })}>Previous</button>
+          <button className="btn btn-quiet" disabled={offset + 25 >= total} onClick={() => updateParams({ offset: String(offset + 25) })}>Next</button>
+        </div>
       </div>
       {apps.error ? <ErrorBox error={apps.error} retry={apps.refetch} /> : !apps.data ? <Skeleton rows={4} /> : list.length === 0 ? (
         <Empty title="No applications here">Applications appear once an institution submits them.</Empty>

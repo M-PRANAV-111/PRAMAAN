@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+**/node_modules
+**/dist
+**/__pycache__
+**/*.pyc
+**/*.sqlite3*
+backend/var
+.codex
+.agents
+.aws
+docs/screenshots

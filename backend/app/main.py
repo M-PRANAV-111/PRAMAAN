@@ -27,6 +27,7 @@ from .pipeline.orchestrator import worker
 from .rulepacks import install_from_files
 from .routes import applications, auth, documents, oversight, system  # noqa: F401 — registers routes
 from .routes import accounts, admin, notifications, tracking, reports  # noqa: F401
+from .routes import ai  # noqa: F401 — registers grounded AI hooks and routing
 
 log = logging.getLogger("pramaan")
 

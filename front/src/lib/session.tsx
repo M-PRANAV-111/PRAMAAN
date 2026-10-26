@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, ApiError, ROLE_VALUES, type Role, type UserOut } from "../api/client";
 import { callEndpoint, hasEndpoint } from "./features";
+import { clearQueryCache } from "./query";
 import { navigate } from "./router";
 
 // Runtime check on the one response everything else depends on.
@@ -18,39 +19,6 @@ function parseUser(u: unknown): UserOut {
     id: r.id, email: r.email, name: r.name, role: r.role as Role,
     institution_id: r.institution_id, institution_name: r.institution_name,
   };
-}
-
-export type DemoRegisteredApplicant = {
-  name: string;
-  email: string;
-  password: string;
-  institution_name: string;
-  aicte_permanent_id: string;
-  state: string;
-  trust_name: string;
-};
-
-const REG_KEY = "pramaan:demo_registrations";
-const ACTIVE_REG_KEY = "pramaan:demo_active_email";
-
-function loadDemoApplicants(): Record<string, DemoRegisteredApplicant> {
-  try { return JSON.parse(localStorage.getItem(REG_KEY) || "{}"); } catch { return {}; }
-}
-
-export function registerDemoApplicant(acct: DemoRegisteredApplicant): void {
-  const all = loadDemoApplicants();
-  all[acct.email.trim().toLowerCase()] = { ...acct, email: acct.email.trim().toLowerCase() };
-  try { localStorage.setItem(REG_KEY, JSON.stringify(all)); } catch { /* ignore */ }
-}
-
-function applyOverlay(u: UserOut): UserOut {
-  try {
-    const activeEmail = sessionStorage.getItem(ACTIVE_REG_KEY);
-    if (!activeEmail) return u;
-    const reg = loadDemoApplicants()[activeEmail];
-    if (!reg) return u;
-    return { ...u, name: reg.name, email: reg.email, institution_name: reg.institution_name };
-  } catch { return u; }
 }
 
 type Session = {
@@ -77,12 +45,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     api("me").then((u) => {
-      setUser(applyOverlay(parseUser(u)));
+      setUser(parseUser(u));
       setExpiresAt(Date.now() + 30 * 60_000);
     }).catch(() => setUser(null)).finally(() => setReady(true));
     const onSignedOut = () => {
-      try { sessionStorage.removeItem(ACTIVE_REG_KEY); } catch { /* ignore */ }
-      setUser(null); setExpiresAt(null); navigate("/login?expired=1", { replace: true });
+      clearQueryCache();
+      setUser(null); setExpiresAt(null); navigate(`/login?expired=1&returnTo=${encodeURIComponent(location.pathname + location.search)}`, { replace: true });
     };
     window.addEventListener("pramaan:signed-out", onSignedOut);
     return () => window.removeEventListener("pramaan:signed-out", onSignedOut);
@@ -101,31 +69,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const normEmail = email.trim().toLowerCase();
-    const reg = loadDemoApplicants()[normEmail];
-    if (reg) {
-      if (reg.password !== password) {
-        throw new ApiError(401, "invalid_credentials", "Email or password is incorrect. Check both and try again.");
-      }
-      const s = await api("login", { body: { email: "nodal@deccan.synthetic.in", password: "12345678" } });
-      try { sessionStorage.setItem(ACTIVE_REG_KEY, normEmail); } catch { /* ignore */ }
-      const u = applyOverlay(parseUser(s.user));
-      setUser(u);
-      const exp = Date.parse(s.expires_at);
-      setExpiresAt(Number.isNaN(exp) ? Date.now() + 30 * 60_000 : exp);
-      setExpiresSoon(false);
-      return u;
-    }
-    try { sessionStorage.removeItem(ACTIVE_REG_KEY); } catch { /* ignore */ }
-    let s;
-    try {
-      s = await api("login", { body: { email: normEmail, password } });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401 && normEmail.endsWith(".synthetic.in") && password === "123456789") {
-        s = await api("login", { body: { email: normEmail, password: "12345678" } });
-      } else {
-        throw err;
-      }
-    }
+    const s = await api("login", { body: { email: normEmail, password } });
+    clearQueryCache();
     const u = parseUser(s.user);
     setUser(u);
     const exp = Date.parse(s.expires_at);
@@ -148,8 +93,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    try { sessionStorage.removeItem(ACTIVE_REG_KEY); } catch { /* ignore */ }
     try { await api("logout"); } catch (e) { if (!(e instanceof ApiError)) throw e; }
+    clearQueryCache();
     setUser(null);
     setExpiresAt(null);
     setExpiresSoon(false);

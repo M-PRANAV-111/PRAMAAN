@@ -29,6 +29,6 @@ export function stepOf(job: { stage_code?: string | null; stage: string; state?:
   return BY_TEXT.find(([re]) => re.test(job.stage))?.[1] ?? 0;
 }
 
-export function isAiStage(job: { stage_code?: string | null; stage: string }): boolean {
-  return job.stage_code === "AI_EXTRACTION" || /ai-assisted/i.test(job.stage);
+export function isAiStage(job: { stage_code?: string | null; stage: string; stage_history?: string[] }): boolean {
+  return job.stage_code === "AI_EXTRACTION" || !!job.stage_history?.includes("AI_EXTRACTION");
 }

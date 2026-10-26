@@ -29,11 +29,11 @@ export function deriveFeatures(meta?: MetaOut | null): FeatureFlags {
     notifications: !!f.notifications && hasEndpoint("listNotifications"),
     timeline: !!f.timeline && hasEndpoint("applicationTimeline"),
     reports: !!f.reports && hasEndpoint("applicationReport"),
-    clarifications: !!f.clarifications && hasEndpoint("respondFinding"),
+    clarifications: !!f.clarifications && hasEndpoint("respondToFinding"),
     ai: !!f.ai && hasEndpoint("aiStatus"),
     routing: !!f.routing && hasEndpoint("applicationRouting"),
     account: hasEndpoint("getAccount") || hasEndpoint("account"),
-    admin: hasEndpoint("listRegistrations") || hasEndpoint("listUsers") || hasEndpoint("adminSystem"),
+    admin: hasEndpoint("listRegistrations") || hasEndpoint("listUsers") || hasEndpoint("systemStatus"),
   };
 }
 

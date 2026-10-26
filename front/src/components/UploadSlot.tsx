@@ -37,7 +37,7 @@ export function UploadSlot({ applicationId, docType, label, accept, replacing, o
       invalidate(`plan:${applicationId}`);
       invalidate(`verifications:${applicationId}`);
       invalidate(`runs:${applicationId}`);
-      if (job.state === "FAILED") setState({ kind: "error", message: "The file was stored but could not be read. Try a clearer copy or a different export of the PDF." });
+      if (job.state === "FAILED") setState({ kind: "error", message: job.error_message ?? "The file was stored but could not be read. Try a clearer copy or a different export of the PDF." });
       else { setState({ kind: "idle" }); toast(`${label} checked`); }
     } catch (e) {
       setState({ kind: "error", message: e instanceof ApiError ? e.message : "Upload failed." });

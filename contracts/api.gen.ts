@@ -30,6 +30,16 @@ export const STAGE_CODE_VALUES = ["QUEUED", "READING", "FINGERPRINTING", "EXTRAC
 export type VerificationStatus = "VERIFIED" | "MISMATCH_DETECTED" | "EXPIRED" | "VERIFICATION_PENDING" | "SOURCE_UNAVAILABLE" | "MANUAL_REVIEW_REQUIRED";
 export const VERIFICATION_STATUS_VALUES = ["VERIFIED", "MISMATCH_DETECTED", "EXPIRED", "VERIFICATION_PENDING", "SOURCE_UNAVAILABLE", "MANUAL_REVIEW_REQUIRED"] as const;
 
+export interface AIStatusOut {
+  provider: string;
+  model: string | null;
+  mode: "disabled" | "simulated" | "synthetic_only";
+  usage: number;
+  budget: number;
+  last_error: string | null;
+  fallback_active: boolean;
+}
+
 export interface AcceptInvitationRequest {
   token: string;
   password: string;
@@ -319,6 +329,8 @@ export interface InvitationRequest {
 }
 
 export interface JobOut {
+  ai_notes?: string[];
+  stage_history?: ("QUEUED" | "READING" | "FINGERPRINTING" | "EXTRACTING_TEXT" | "EXTRACTING_FIELDS" | "AI_EXTRACTION" | "INTEGRITY" | "VERIFYING" | "RULES" | "ROUTING" | "DONE" | "FAILED")[];
   stage_code?: "QUEUED" | "READING" | "FINGERPRINTING" | "EXTRACTING_TEXT" | "EXTRACTING_FIELDS" | "AI_EXTRACTION" | "INTEGRITY" | "VERIFYING" | "RULES" | "ROUTING" | "DONE" | "FAILED" | null;
   error_message?: string | null;
   id: string;
@@ -443,6 +455,19 @@ export interface ReviewOut {
 export interface ReviewRequest {
   decision: "CONFIRM" | "DISMISS" | "ESCALATE" | "REQUEST_CLARIFICATION";
   reason: string;
+}
+
+export interface RoutingOut {
+  outcome: "READY_FOR_SCRUTINY" | "DEFICIENCIES_FLAGGED" | "MANUAL_REVIEW_REQUIRED";
+  reasons: RoutingReason[];
+  advisory?: true;
+}
+
+export interface RoutingReason {
+  text: string;
+  link: string;
+  finding_id?: string | null;
+  document_id?: string | null;
 }
 
 export interface RuleDiffEntry {
@@ -642,6 +667,8 @@ export const endpoints = {
   documentHistory: { method: "GET", path: "/api/v1/applications/{application_id}/documents/history" },
   respondToFinding: { method: "POST", path: "/api/v1/findings/{finding_id}/responses" },
   applicationReport: { method: "GET", path: "/api/v1/applications/{application_id}/report" },
+  aiStatus: { method: "GET", path: "/api/v1/ai/status" },
+  applicationRouting: { method: "GET", path: "/api/v1/applications/{application_id}/routing" },
 } as const;
 
 export interface EndpointTypes {
@@ -701,5 +728,7 @@ export interface EndpointTypes {
   documentHistory: { response: DocumentOut[]; body: undefined };
   respondToFinding: { response: ResponseOut; body: ResponseRequest };
   applicationReport: { response: Blob; body: undefined };
+  aiStatus: { response: AIStatusOut; body: undefined };
+  applicationRouting: { response: RoutingOut; body: undefined };
 }
 export type EndpointName = keyof typeof endpoints;

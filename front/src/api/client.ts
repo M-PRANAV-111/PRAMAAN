@@ -14,6 +14,7 @@ type Options<K extends EndpointName> = {
   query?: Record<string, string | undefined>;
   body?: EndpointTypes[K]["body"];
   signal?: AbortSignal;
+  onResponse?: (response: Response) => void;
 };
 
 export function urlFor(name: EndpointName, path: Record<string, string> = {}, query: Record<string, string | undefined> = {}): string {
@@ -26,7 +27,7 @@ export function urlFor(name: EndpointName, path: Record<string, string> = {}, qu
 async function parseError(res: Response): Promise<ApiError> {
   try {
     const data = await res.json();
-    return new ApiError(res.status, data?.error?.code ?? "error", data?.error?.message ?? res.statusText, data?.error?.details);
+    return new ApiError(res.status, data?.error?.code ?? "error", res.status === 429 ? "Too many attempts. Wait a minute." : data?.error?.message ?? res.statusText, data?.error?.details);
   } catch {
     return new ApiError(res.status, "network_error", res.status >= 500 ? "The server could not complete the request." : res.statusText);
   }
@@ -52,6 +53,7 @@ export async function api<K extends EndpointName>(name: K, opts: Options<K> = {}
     if (res.status === 401 && name !== "login" && name !== "me") window.dispatchEvent(new CustomEvent("pramaan:signed-out"));
     throw err;
   }
+  opts.onResponse?.(res);
   return (await res.json()) as EndpointTypes[K]["response"];
 }
 

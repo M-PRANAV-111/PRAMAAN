@@ -2506,10 +2506,151 @@
           "any authenticated"
         ]
       }
+    },
+    "/api/v1/ai/status": {
+      "get": {
+        "operationId": "aiStatus",
+        "summary": "AI provider mode, budget and fallback state",
+        "tags": [
+          "ai"
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIStatusOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "ADMIN"
+        ]
+      }
+    },
+    "/api/v1/applications/{application_id}/routing": {
+      "get": {
+        "operationId": "applicationRouting",
+        "summary": "Deterministic advisory routing with evidence links",
+        "tags": [
+          "ai"
+        ],
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutingOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
+      "AIStatusOut": {
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "mode": {
+            "enum": [
+              "disabled",
+              "simulated",
+              "synthetic_only"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "usage": {
+            "title": "Usage",
+            "type": "integer"
+          },
+          "budget": {
+            "title": "Budget",
+            "type": "integer"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "fallback_active": {
+            "title": "Fallback Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "model",
+          "mode",
+          "usage",
+          "budget",
+          "last_error",
+          "fallback_active"
+        ],
+        "title": "AIStatusOut",
+        "type": "object"
+      },
       "AcceptInvitationRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4271,6 +4412,34 @@
       "JobOut": {
         "additionalProperties": false,
         "properties": {
+          "ai_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ai Notes",
+            "type": "array"
+          },
+          "stage_history": {
+            "items": {
+              "enum": [
+                "QUEUED",
+                "READING",
+                "FINGERPRINTING",
+                "EXTRACTING_TEXT",
+                "EXTRACTING_FIELDS",
+                "AI_EXTRACTION",
+                "INTEGRITY",
+                "VERIFYING",
+                "RULES",
+                "ROUTING",
+                "DONE",
+                "FAILED"
+              ],
+              "type": "string"
+            },
+            "title": "Stage History",
+            "type": "array"
+          },
           "stage_code": {
             "anyOf": [
               {
@@ -5006,6 +5175,82 @@
           "reason"
         ],
         "title": "ReviewRequest",
+        "type": "object"
+      },
+      "RoutingOut": {
+        "additionalProperties": false,
+        "properties": {
+          "outcome": {
+            "enum": [
+              "READY_FOR_SCRUTINY",
+              "DEFICIENCIES_FLAGGED",
+              "MANUAL_REVIEW_REQUIRED"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "advisory": {
+            "const": true,
+            "default": true,
+            "title": "Advisory",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "outcome",
+          "reasons"
+        ],
+        "title": "RoutingOut",
+        "type": "object"
+      },
+      "RoutingReason": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "link": {
+            "title": "Link",
+            "type": "string"
+          },
+          "finding_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Finding Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Document Id"
+          }
+        },
+        "required": [
+          "text",
+          "link"
+        ],
+        "title": "RoutingReason",
         "type": "object"
       },
       "RuleDiffEntry": {

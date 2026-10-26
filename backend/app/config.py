@@ -51,6 +51,7 @@ class Settings(BaseModel):
     sentry_dsn: str = Field(default="", repr=False)
     trust_proxy: bool = False
     demo_accounts: bool = False
+    show_demo_accounts: bool = False
 
     @field_validator("cors_origins", mode="before")
     @classmethod
@@ -88,7 +89,7 @@ class Settings(BaseModel):
                 raise ValueError("PUBLIC_BASE_URL must be set to a public HTTPS URL in production")
             if self.email_provider == "console":
                 raise ValueError("Console email is forbidden in production")
-            if self.demo_accounts or os.environ.get("SEED_DEMO_PASSWORD", "").strip():
+            if self.demo_accounts or self.show_demo_accounts or os.environ.get("SEED_DEMO_PASSWORD", "").strip():
                 raise ValueError("Demo accounts are forbidden in production")
         return self
 
@@ -115,6 +116,7 @@ def get_settings() -> Settings:
         "backup_schedule": _env_bool("BACKUP_SCHEDULE", False),
         "trust_proxy": _env_bool("TRUST_PROXY", bool(env.get("RAILWAY_ENVIRONMENT") or env.get("FLY_APP_NAME"))),
         "demo_accounts": _env_bool("DEMO_ACCOUNTS", False),
+        "show_demo_accounts": _env_bool("SHOW_DEMO_ACCOUNTS", False),
     }
     mapping = {
         "DATA_DIR": "data_dir",

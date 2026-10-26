@@ -11,6 +11,7 @@ const cache = new Map<string, Entry>();
 const fetchers = new Map<string, () => Promise<unknown>>();
 const listeners = new Map<string, Set<() => void>>();
 const STALE_MS = 10_000;
+let identityGeneration = 0;
 
 function notify(key: string) {
   listeners.get(key)?.forEach((l) => l());
@@ -21,8 +22,10 @@ function load(key: string, force = false): Promise<void> {
   if (!fetcher) return Promise.resolve();
   const prev = cache.get(key) ?? { fetching: false, updatedAt: 0 };
   if (prev.promise && !force) return prev.promise;
+  const generation = identityGeneration;
   const promise = fetcher()
     .then((data) => {
+      if (generation !== identityGeneration) return;
       const json = JSON.stringify(data);
       const cur = cache.get(key)!;
       if (json === cur.json) {
@@ -34,6 +37,7 @@ function load(key: string, force = false): Promise<void> {
       notify(key);
     })
     .catch((error: Error) => {
+      if (generation !== identityGeneration) return;
       if (error?.name === "AbortError") return;
       cache.set(key, { ...cache.get(key)!, error, fetching: false, promise: undefined });
       notify(key);
@@ -41,6 +45,14 @@ function load(key: string, force = false): Promise<void> {
   cache.set(key, { ...prev, fetching: true, promise });
   if (!prev.data) notify(key);
   return promise;
+}
+
+/** Remove account-scoped cached responses when the authenticated identity changes. */
+export function clearQueryCache() {
+  identityGeneration++;
+  const keys = [...cache.keys()];
+  cache.clear();
+  for (const key of keys) notify(key);
 }
 
 /** Refetch every cached query whose key starts with `prefix` (in the background). */

@@ -15,7 +15,7 @@ class ConfigurationTests(unittest.TestCase):
 
     def test_production_guards(self):
         for overrides in ({'email_provider':'console'},{'public_base_url':'http://example.test'},
-                          {'demo_accounts':True},{'cookie_secure':False},{'jwt_secret':'short'},{'cors_origins':['*']}):
+                          {'demo_accounts':True},{'show_demo_accounts':True},{'cookie_secure':False},{'jwt_secret':'short'},{'cors_origins':['*']}):
             with self.subTest(overrides=overrides),self.assertRaises(ValueError):
                 self.production(**overrides)
         with patch.dict(os.environ,{'SEED_DEMO_PASSWORD':''}):

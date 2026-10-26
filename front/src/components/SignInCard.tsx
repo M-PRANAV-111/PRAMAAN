@@ -2,6 +2,7 @@ import { useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent 
 import { ApiError } from "../api/client";
 import { Link, navigate, useLocation, useQueryParam } from "../lib/router";
 import { homeFor, useSession } from "../lib/session";
+import { useFeatures } from "../lib/features";
 import { cx } from "./ui";
 
 export const SIGN_IN_EMAIL_ID = "signin-email";
@@ -27,6 +28,7 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
 
 export function SignInCard({ asPage = false }: { asPage?: boolean }) {
   const { signIn } = useSession();
+  const { features, meta } = useFeatures();
   const loc = useLocation();
   const expired = useQueryParam("expired");
   const returnTo = useQueryParam("returnTo");
@@ -191,11 +193,11 @@ export function SignInCard({ asPage = false }: { asPage?: boolean }) {
       </button>
 
       <div className="flex flex-wrap justify-between gap-2 text-xs text-ink-soft">
-        <Link to="/forgot-password" className="link">Forgot password?</Link>
-        <Link to="/register" className="link font-semibold text-ink">New applicant? Register your institution</Link>
+        {features.password_reset && <Link to="/forgot-password" className="link">Forgot password?</Link>}
+        {features.registration && <Link to="/register" className="link font-semibold text-ink">New applicant? Register your institution</Link>}
       </div>
 
-      <div className="border-t border-rule pt-3">
+      {meta?.features?.demo_accounts && <div className="border-t border-rule pt-3">
         <div className="text-xs font-medium text-ink-soft">Synthetic demo accounts (click to fill email)</div>
         <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
           {DEMO_ACCOUNTS.map((acct) => {
@@ -231,7 +233,7 @@ export function SignInCard({ asPage = false }: { asPage?: boolean }) {
         <p className="mt-2.5 text-xs text-ink-soft">
           Demo password is printed by the seed script at startup.
         </p>
-      </div>
+      </div>}
     </form>
   );
 }

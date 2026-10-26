@@ -4,7 +4,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 
 base, password, out = sys.argv[1], sys.argv[2], Path(sys.argv[3])
-demo = Path(__file__).resolve().parents[2] / "backend/var/demo_files"
+demo = Path(__import__('os').environ.get('PRAMAAN_DEMO_DIR', str(Path(__file__).resolve().parents[2] / "backend/var/demo_files")))
 out.mkdir(parents=True, exist_ok=True)
 errors = []
 

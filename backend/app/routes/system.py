@@ -49,7 +49,7 @@ def meta(ctx: Ctx):
     with reader() as c:
         row, pack = active_version(c)
     return {
-        "features": snapshot(),
+        "features": {**snapshot(), "demo_accounts": get_settings().show_demo_accounts and get_settings().env != 'production'},
         "doc_types": DOC_TYPES,
         "categories": {k: v.get("label", k) for k, v in pack.categories.items()},
         "application_statuses": list(ApplicationStatus.__args__),

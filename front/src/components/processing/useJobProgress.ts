@@ -78,7 +78,7 @@ export function useJobProgress(initialJob: JobOut | null): JobProgressState {
     stageCode,
     stageLabel: job?.stage ?? "Reading file",
     progress: job?.progress ?? 0,
-    error: job?.error ?? null,
+    error: job?.error_message ?? job?.error ?? null,
     slow,
     aiAssisted: aiSeen || (job ? isAiStage(job) : false),
   };
