@@ -1,0 +1,13 @@
+{
+ "_comment": "Hand-authored test fixture, not a model output. It answers for the two-column synthetic affidavit that front/e2e/e2e_ai.py generates (intake 120, faculty 60). total_intake is printed on that page and must be grounded into a claim; faculty_count 999999 contradicts the page (it prints 60), so it must stay a suggestion.",
+ "total_intake": {
+  "value": "120",
+  "page": 1,
+  "quote": "Total Intake Sought 120"
+ },
+ "faculty_count": {
+  "value": "999999",
+  "page": 1,
+  "quote": null
+ }
+}

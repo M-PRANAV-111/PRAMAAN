@@ -1,0 +1,20 @@
+{
+ "id": "interaction-test",
+ "status": "completed",
+ "model": "test",
+ "steps": [
+  {
+   "type": "model_output",
+   "content": [
+    {
+     "type": "text",
+     "text": "{\"text\": \"The intake differs: 300 in the affidavit and 240 in the summary, which is 60 fewer than the 360 allowed last year.\"}"
+    }
+   ]
+  }
+ ],
+ "usage": {
+  "total_input_tokens": 1200,
+  "total_output_tokens": 140
+ }
+}

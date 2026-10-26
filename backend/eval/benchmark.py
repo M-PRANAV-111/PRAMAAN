@@ -86,7 +86,13 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--repeats", type=int, default=2, help="bundles per fault type / hard-negative type")
     ap.add_argument("--out", type=Path, default=None, help="report path (default DATA_DIR/benchmark/latest.json)")
+    ap.add_argument("--ai", choices=["off", "on", "both"], default="off",
+                    help="off (default): the deterministic benchmark, unchanged. on: the AI evaluation only. both: both, in turn.")
+    ap.add_argument("--ai-sim", choices=["oracle", "adversarial"], default=None,
+                    help="with --ai on|both and no provider key: use a SIMULATED model (measures the grounding guard, not a model)")
     args = ap.parse_args()
+    if args.ai == "on":
+        return _run_ai_eval(args)
 
     target_data_dir = Path(os.environ.get("DATA_DIR", Path(__file__).resolve().parents[1] / "var"))
     out = args.out or target_data_dir / "benchmark" / "latest.json"
@@ -169,6 +175,17 @@ def main() -> None:
     out.write_text(json.dumps(report, indent=2))
     print(json.dumps({k: v for k, v in report.items() if k != "cases"}, indent=2))
     work.cleanup()
+    if args.ai == "both":
+        _run_ai_eval(args)
+
+
+def _run_ai_eval(args) -> None:
+    """The AI evaluation runs in its own process so it gets its own database and environment."""
+    import subprocess
+    cmd = [sys.executable, "-m", "eval.ai_eval", "--repeats", str(args.repeats)]
+    if args.ai_sim:
+        cmd += ["--sim", args.ai_sim]
+    subprocess.run(cmd, cwd=Path(__file__).resolve().parents[1], check=True)
 
 
 if __name__ == "__main__":

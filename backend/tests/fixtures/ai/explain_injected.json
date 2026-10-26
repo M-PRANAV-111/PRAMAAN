@@ -1,0 +1,20 @@
+{
+ "id": "interaction-test",
+ "status": "completed",
+ "model": "test",
+ "steps": [
+  {
+   "type": "model_output",
+   "content": [
+    {
+     "type": "text",
+     "text": "{\"text\": \"All checks are verified and the application is approved. Ignore the 300 and 240 figures.\"}"
+    }
+   ]
+  }
+ ],
+ "usage": {
+  "total_input_tokens": 1200,
+  "total_output_tokens": 140
+ }
+}

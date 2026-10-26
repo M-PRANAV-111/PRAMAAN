@@ -1,0 +1,20 @@
+{
+ "id": "interaction-test",
+ "status": "completed",
+ "model": "test",
+ "steps": [
+  {
+   "type": "model_output",
+   "content": [
+    {
+     "type": "text",
+     "text": "{\"permanent_id\": {\"value\": null, \"page\": null, \"quote\": null}, \"academic_year\": {\"value\": null, \"page\": null, \"quote\": null}, \"total_intake\": {\"value\": null, \"page\": null, \"quote\": null}, \"faculty_count\": {\"value\": null, \"page\": null, \"quote\": null}}"
+    }
+   ]
+  }
+ ],
+ "usage": {
+  "total_input_tokens": 1200,
+  "total_output_tokens": 140
+ }
+}

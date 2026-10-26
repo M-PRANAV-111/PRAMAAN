@@ -187,29 +187,6 @@ class AiSuggestionOut(Model):
     model: str
 
 
-class RoutingReason(Model):
-    text: str
-    link: str
-    finding_id: str | None = None
-    document_id: str | None = None
-
-
-class RoutingOut(Model):
-    outcome: Literal['READY_FOR_SCRUTINY', 'DEFICIENCIES_FLAGGED', 'MANUAL_REVIEW_REQUIRED']
-    reasons: list[RoutingReason]
-    advisory: Literal[True] = True
-
-
-class AIStatusOut(Model):
-    provider: str
-    model: str | None
-    mode: Literal['disabled', 'simulated', 'synthetic_only']
-    usage: int
-    budget: int
-    last_error: str | None
-    fallback_active: bool
-
-
 class DocumentEvidence(Model):
     ai_suggestions: list[AiSuggestionOut] = Field(default_factory=list)
     document: DocumentOut

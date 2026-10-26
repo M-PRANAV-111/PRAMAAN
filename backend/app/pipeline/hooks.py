@@ -17,11 +17,10 @@ def run_steps(after, conn, job_id, document_or_application, stage):
 
 
 STAGE_CODES = {
-    'AI-assisted extraction with page grounding': 'AI_EXTRACTION',
-    'Routing for evidence-based scrutiny': 'ROUTING',
     "Queued": "QUEUED", "Reading file": "READING", "Fingerprinting photograph": "FINGERPRINTING",
     "Extracting text and layout": "EXTRACTING_TEXT", "Extracting fields": "EXTRACTING_FIELDS",
     "Checking document integrity": "INTEGRITY", "Verifying with sources": "VERIFYING",
     "Evaluating rule pack": "RULES", "Re-validating affected rules": "RULES",
     "Done": "DONE", "Failed": "FAILED", "Re-queued after restart": "QUEUED",
+    "AI-assisted extraction": "AI_EXTRACTION", "Recommending next steps": "ROUTING",
 }

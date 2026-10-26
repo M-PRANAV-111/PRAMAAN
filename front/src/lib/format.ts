@@ -71,3 +71,16 @@ export const FIELD_LABEL: Record<string, string> = {
 };
 
 export const label = (field: string | null | undefined) => (field ? FIELD_LABEL[field] ?? field.replace(/_/g, " ") : "");
+
+/** Why an AI-proposed value was not taken as a claim (rules never read suggestions). */
+export const SUGGESTION_REASON: Record<"not_found_on_page" | "conflicts_with_page" | "low_confidence", string> = {
+  not_found_on_page: "not found on the page",
+  conflicts_with_page: "differs from what the page shows",
+  low_confidence: "could not be matched confidently",
+};
+
+/** How a value was read: the template extractor, or an AI proposal that was matched on the page. */
+export const extractorLabel = (extractor: string) =>
+  extractor === "ai+text" ? "AI-assisted, matched on the text layer"
+  : extractor === "ai+ocr" ? "AI-assisted, matched on the scan (OCR)"
+  : extractor.startsWith("ocr") ? "OCR" : "Text layer";

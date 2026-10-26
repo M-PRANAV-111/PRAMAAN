@@ -58,7 +58,7 @@ The PS text was available only through the team's documents (all five agree on i
 | NF-4 | Rate limiting on login and upload | Master §9 | P0 | In-memory token bucket (per IP/user) | 11th rapid login attempt → 429 |
 | NF-5 | Security headers, strict CORS | Master §13 | P0 | Middleware | Response headers present |
 | NF-6 | Logs without sensitive content | Master §9 | P0 | Structured logs with ids only | Code review |
-| NF-7 | Prompt-injection resistance (document text is data) | R3 §17 | P0 | No LLM in pipeline; extracted text never executed or used as instructions | Rule evaluator rejects non-whitelisted AST |
+| NF-7 | Prompt-injection resistance (document text is data) | R3 §17 | P0 | No LLM in the decision path; extracted text never executed or used as instructions; the optional AI layer is grounded, schema-validated and off by default | Rule evaluator rejects non-whitelisted AST |
 | NF-8 | Health and readiness endpoints | Master §13 | P0 | `/healthz`, `/readyz` (DB + storage + tesseract) | E2E check |
 | NF-9 | Accessibility and reduced motion | Master §7 | P0 | Semantic HTML, focus rings, `prefers-reduced-motion` | Browser check |
 

@@ -201,7 +201,7 @@ Institution uploads documents
 - No approve, reject or forged vocabulary in any status, decision or message (a test checks this).
 - `findings.advisory` is forced to 1 by a database constraint.
 - Simulated sources are flagged `simulated: true` and labelled in the UI.
-- No language model in the decision path; document text is data, never instructions.
+- No language model in the decision path; document text is data, never instructions. An optional AI layer (off by default) may only propose values that must be found on the page, reword findings under validation and recommend routing.
 - No outbound network calls unless an integration is configured and authorized.
 
 ---
@@ -505,7 +505,7 @@ Screenshots: `docs/screenshots/`.
 | Malicious uploads | Content-based type check, size and page caps, encrypted/malformed rejection, decompression-bomb guard, EXIF stripped on display | Yes |
 | Path traversal | Content-addressed storage | Yes |
 | Code injection via rules | Whitelisted expression evaluator; packs validated before activation | Yes |
-| Prompt injection in documents | No language model; document text never executed | By design |
+| Prompt injection in documents | Document text never executed; the optional AI layer treats it as untrusted data and accepts a value only if it is found on the page printed as that field | Yes (`test_ai_injection`) |
 | Unilateral rule change | Four-eyes activation, audited | Yes |
 | Tampering with history | Hash chain plus verifier | Yes |
 | Over-trusting automation | Advisory-only findings, DB constraint, no adverse vocabulary, reason required | Yes |
@@ -861,7 +861,7 @@ Order: backend stages 1–2 and frontend stage 1 in parallel → backend stage 4
 
 ## 25. Questions judges are likely to ask
 
-**Why not just use an LLM?** It is non-deterministic and hard to audit for regulatory findings, and text inside documents could carry prompt injection. We extract deterministically first; a model could later be a validated fallback, never the decider.
+**Why not just use an LLM?** It is non-deterministic and hard to audit for regulatory findings, and text inside documents could carry prompt injection. We extract deterministically first. An optional, off-by-default model layer can read difficult layouts and reword findings, but a value counts only if it is found on the page printed as that field, and it is never the decider.
 
 **How will you get issuer data?** Through DigiLocker requester onboarding on API Setu with holder consent, and AICTE-authorized interfaces. Until then the adapters are labelled mocks and unavailable sources go to an officer.
 

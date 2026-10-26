@@ -2510,7 +2510,7 @@
     "/api/v1/ai/status": {
       "get": {
         "operationId": "aiStatus",
-        "summary": "AI provider mode, budget and fallback state",
+        "summary": "AI layer status: provider, models, budget, errors (never a key)",
         "tags": [
           "ai"
         ],
@@ -2520,7 +2520,52 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AIStatusOut"
+                  "$ref": "#/components/schemas/AiStatusOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "ADMIN",
+          "AUDITOR"
+        ]
+      }
+    },
+    "/api/v1/ai/kill-switch": {
+      "post": {
+        "operationId": "aiKillSwitch",
+        "summary": "Engage or release the runtime AI kill switch",
+        "tags": [
+          "ai"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KillSwitchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatusOut"
                 }
               }
             }
@@ -2544,9 +2589,9 @@
     "/api/v1/applications/{application_id}/routing": {
       "get": {
         "operationId": "applicationRouting",
-        "summary": "Deterministic advisory routing with evidence links",
+        "summary": "Routing recommendation with reasons",
         "tags": [
-          "ai"
+          "findings"
         ],
         "parameters": [
           {
@@ -2584,73 +2629,112 @@
           "any authenticated"
         ]
       }
+    },
+    "/api/v1/jobs/{job_id}/notes": {
+      "get": {
+        "operationId": "jobNotes",
+        "summary": "INFO notes recorded on a processing job (e.g. an AI step that was skipped)",
+        "tags": [
+          "documents"
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JobNoteOut"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "any authenticated"
+        ]
+      }
+    },
+    "/api/v1/documents/{document_id}/ai-suggestions/review": {
+      "post": {
+        "operationId": "reviewAiSuggestion",
+        "summary": "Confirm or dismiss the open AI suggestions for one field (reason required, audited)",
+        "tags": [
+          "evidence"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSuggestionReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            }
+          }
+        },
+        "x-roles": [
+          "OFFICER",
+          "ADMIN"
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
-      "AIStatusOut": {
-        "additionalProperties": false,
-        "properties": {
-          "provider": {
-            "title": "Provider",
-            "type": "string"
-          },
-          "model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model"
-          },
-          "mode": {
-            "enum": [
-              "disabled",
-              "simulated",
-              "synthetic_only"
-            ],
-            "title": "Mode",
-            "type": "string"
-          },
-          "usage": {
-            "title": "Usage",
-            "type": "integer"
-          },
-          "budget": {
-            "title": "Budget",
-            "type": "integer"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "fallback_active": {
-            "title": "Fallback Active",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "provider",
-          "model",
-          "mode",
-          "usage",
-          "budget",
-          "last_error",
-          "fallback_active"
-        ],
-        "title": "AIStatusOut",
-        "type": "object"
-      },
       "AcceptInvitationRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2921,6 +3005,121 @@
         "title": "AdminUserOut",
         "type": "object"
       },
+      "AiBudgetOut": {
+        "additionalProperties": false,
+        "properties": {
+          "requests": {
+            "title": "Requests",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requests",
+          "pages"
+        ],
+        "title": "AiBudgetOut",
+        "type": "object"
+      },
+      "AiStatusOut": {
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "enum": [
+              "none",
+              "gemini",
+              "groq",
+              "fixture"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "models": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "object"
+          },
+          "mode": {
+            "enum": [
+              "off",
+              "synthetic_only",
+              "allow_real"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "kill_switch": {
+            "title": "Kill Switch",
+            "type": "boolean"
+          },
+          "requests_today": {
+            "title": "Requests Today",
+            "type": "integer"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/AiBudgetOut"
+          },
+          "pages_today": {
+            "title": "Pages Today",
+            "type": "integer"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Error Code"
+          },
+          "last_error_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Error At"
+          },
+          "fallback_active": {
+            "title": "Fallback Active",
+            "type": "boolean"
+          },
+          "cache_hits_today": {
+            "title": "Cache Hits Today",
+            "type": "integer"
+          },
+          "simulated": {
+            "default": false,
+            "title": "Simulated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider",
+          "models",
+          "mode",
+          "kill_switch",
+          "requests_today",
+          "budget",
+          "pages_today",
+          "fallback_active",
+          "cache_hits_today"
+        ],
+        "title": "AiStatusOut",
+        "type": "object"
+      },
       "AiSuggestionOut": {
         "additionalProperties": false,
         "properties": {
@@ -2965,6 +3164,39 @@
           "model"
         ],
         "title": "AiSuggestionOut",
+        "type": "object"
+      },
+      "AiSuggestionReview": {
+        "additionalProperties": false,
+        "description": "An officer's decision on an AI suggestion that could not be grounded on the page.",
+        "properties": {
+          "field": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Field",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "CONFIRM",
+              "DISMISS"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "decision",
+          "reason"
+        ],
+        "title": "AiSuggestionReview",
         "type": "object"
       },
       "ApplicationCreate": {
@@ -3352,6 +3584,37 @@
           "head_hash"
         ],
         "title": "AuditVerifyOut",
+        "type": "object"
+      },
+      "AutomatedActionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "notified": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Notified"
+          }
+        },
+        "required": [
+          "type",
+          "summary"
+        ],
+        "title": "AutomatedActionOut",
         "type": "object"
       },
       "BackupsOut": {
@@ -4409,6 +4672,36 @@
         "title": "InvitationRequest",
         "type": "object"
       },
+      "JobNoteOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "level": {
+            "const": "INFO",
+            "title": "Level",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "level",
+          "text",
+          "created_at"
+        ],
+        "title": "JobNoteOut",
+        "type": "object"
+      },
       "JobOut": {
         "additionalProperties": false,
         "properties": {
@@ -4546,6 +4839,27 @@
           "application_id"
         ],
         "title": "JobOut",
+        "type": "object"
+      },
+      "KillSwitchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "engaged": {
+            "title": "Engaged",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engaged",
+          "reason"
+        ],
+        "title": "KillSwitchRequest",
         "type": "object"
       },
       "LoginRequest": {
@@ -5183,42 +5497,71 @@
           "outcome": {
             "enum": [
               "READY_FOR_SCRUTINY",
-              "DEFICIENCIES_FLAGGED",
-              "MANUAL_REVIEW_REQUIRED"
+              "CORRECTIONS_REQUIRED",
+              "OFFICER_REVIEW_REQUIRED"
             ],
             "title": "Outcome",
             "type": "string"
           },
           "reasons": {
             "items": {
-              "$ref": "#/components/schemas/RoutingReason"
+              "$ref": "#/components/schemas/RoutingReasonOut"
             },
             "title": "Reasons",
             "type": "array"
           },
-          "advisory": {
-            "const": true,
-            "default": true,
-            "title": "Advisory",
+          "automated_actions": {
+            "items": {
+              "$ref": "#/components/schemas/AutomatedActionOut"
+            },
+            "title": "Automated Actions",
+            "type": "array"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Run Id"
+          },
+          "computed_at": {
+            "title": "Computed At",
+            "type": "string"
+          },
+          "ai_used": {
+            "title": "Ai Used",
             "type": "boolean"
+          },
+          "policy_version": {
+            "title": "Policy Version",
+            "type": "string"
           }
         },
         "required": [
           "outcome",
-          "reasons"
+          "reasons",
+          "automated_actions",
+          "computed_at",
+          "ai_used",
+          "policy_version"
         ],
         "title": "RoutingOut",
         "type": "object"
       },
-      "RoutingReason": {
+      "RoutingReasonOut": {
         "additionalProperties": false,
         "properties": {
-          "text": {
-            "title": "Text",
+          "code": {
+            "title": "Code",
             "type": "string"
           },
-          "link": {
-            "title": "Link",
+          "text": {
+            "title": "Text",
             "type": "string"
           },
           "finding_id": {
@@ -5247,10 +5590,10 @@
           }
         },
         "required": [
-          "text",
-          "link"
+          "code",
+          "text"
         ],
-        "title": "RoutingReason",
+        "title": "RoutingReasonOut",
         "type": "object"
       },
       "RuleDiffEntry": {

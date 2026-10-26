@@ -84,7 +84,8 @@ def visible_text_indicators(pdf_bytes: bytes, claims: list[ExtractedClaim]) -> t
     _configure_tesseract()
     checks: list[dict[str, Any]] = []
     indicators: list[Indicator] = []
-    candidates = [c for c in claims if c.extractor.startswith("text-layer") and c.value_norm is not None
+    # AI-grounded text-layer claims ("ai+text") get the same overlay-edit check as template claims.
+    candidates = [c for c in claims if c.extractor.startswith(("text-layer", "ai+text")) and c.value_norm is not None
                   and (c.value_type == "int" or (c.value_type == "date" and re.fullmatch(r"[\d\-/.]+", c.value_raw)))]
     renders: dict[int, Any] = {}
     scale = RENDER_DPI / 72

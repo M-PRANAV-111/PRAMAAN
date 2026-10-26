@@ -101,7 +101,7 @@ Audit chain: `hash = SHA-256(prev_hash ‖ seq ‖ ts ‖ actor ‖ action ‖ o
 - Rate limits: login and upload.
 - Headers: CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`; HSTS in production.
 - Startup refuses a default or short `JWT_SECRET` in production.
-- Document text is data only: no language model, no execution of extracted content.
+- Document text is data only: no execution of extracted content. An optional, off-by-default AI layer (see `docs/SECURITY.md`, "AI layer") may propose field values that count only when grounded on the page, reword rule findings under validation, and recommend routing; it never decides.
 See `docs/SECURITY.md` for the threat model.
 
 ## 8. Frontend architecture

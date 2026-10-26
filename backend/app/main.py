@@ -27,7 +27,10 @@ from .pipeline.orchestrator import worker
 from .rulepacks import install_from_files
 from .routes import applications, auth, documents, oversight, system  # noqa: F401 — registers routes
 from .routes import accounts, admin, notifications, tracking, reports  # noqa: F401
-from .routes import ai  # noqa: F401 — registers grounded AI hooks and routing
+from .routes import ai as ai_routes  # noqa: F401 — AI status, kill switch, routing recommendation, job notes
+from .ai.install import install as install_ai
+
+install_ai()  # registers the pipeline steps and feature flags; inert when AI_PROVIDER=none
 
 log = logging.getLogger("pramaan")
 

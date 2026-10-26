@@ -8,6 +8,7 @@ from PIL import Image, ImageOps
 from starlette.responses import Response
 
 from .. import audit
+from ..ai.store import suggestions_for
 from ..api import ApiError, Ctx, not_found, route
 from ..config import get_settings
 from ..db import dumps, loads, new_id, now_iso, reader, transaction
@@ -114,9 +115,8 @@ def document_evidence(ctx: Ctx):
                 for r in c.execute("SELECT * FROM verifications WHERE document_id = ? ORDER BY tier", (d["id"],))]
         integ = [{"kind": r["kind"], "page": r["page"], "bbox": loads(r["bbox_json"]), **loads(r["detail_json"], {})}
                  for r in c.execute("SELECT * FROM integrity_signals WHERE document_id = ?", (d["id"],))]
-        suggestions = [dict(r) for r in c.execute('SELECT field,value,page,reason,model FROM ai_suggestions WHERE document_id=? ORDER BY id',(d['id'],))]
-        return {"document": document_out(d,c), "claims": claims, "verifications": vers, "integrity": integ, "ai_suggestions":suggestions,
-                "extraction": loads(d["extraction_json"])}
+        return {"document": document_out(d,c), "claims": claims, "verifications": vers, "integrity": integ,
+                "extraction": loads(d["extraction_json"]), "ai_suggestions": suggestions_for(c, d["id"])}
 
 
 @route("GET", "/api/v1/documents/{document_id}/pages/{page}", summary="Rendered page image (PNG) for the evidence viewer",

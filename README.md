@@ -172,8 +172,28 @@ See [`.env.example`](.env.example). Production refuses to start with a default o
 ## Regulatory rules and verification
 Rules live in `backend/rulepacks/aicte-eoa/2026.1.yaml`: completeness, condition (`assert`), cross-document (`consistency`, optional AICTE-record tie-break), validity (`expiry` on typed dates) and source-check rules. Each cites a clause and carries its remedy. Every run records the pack version. Expression syntax is restricted to arithmetic, comparisons, boolean logic and a few pure functions — no attribute access, calls or `eval`.
 
+## AI layer (optional, off by default)
+`AI_PROVIDER=none` (the default) disables every AI code path; findings, statuses, claims and repair plans are then identical to the deterministic pipeline. When enabled, the layer adds three things and decides nothing:
+
+1. **Grounded extraction** (`AI_EXTRACTION` stage). If a field the rule pack reads is missing or below `AI_TRIGGER_CONFIDENCE` (0.80), the page has no text layer, or the document type is uncertain, a model proposes `{value, page, quote}` per field. A proposal becomes a claim only if the value is found on that page (text layer first, then OCR tokens) *printed as that field*; the claim then carries the real bounding box and extractor `ai+text`/`ai+ocr`. Everything else is shown as a suggestion that no rule reads. A deterministic claim with confidence ≥ 0.95 is never overwritten. A confident, quoted document-type mismatch raises a REVIEW finding.
+2. **Plain-language wording.** A rule finding may be reworded from its structured proof only; the text is used (`explanation_source: "ai_checked"`) only if it adds no number, date, identifier or rule ID and has no decision vocabulary. Otherwise the template stays.
+3. **Routing recommendation** (`ROUTING` stage, `GET /api/v1/applications/{id}/routing`): `READY_FOR_SCRUTINY`, `CORRECTIONS_REQUIRED` or `OFFICER_REVIEW_REQUIRED`, with reasons. It is computed from deterministic state, so it is available even with AI off; because every verification source in this build is simulated, a case is never READY here. Automated actions (notify the institution, flag "No open findings", escalate to officers) are audited as `routing.action`.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `AI_PROVIDER` | `none` | `gemini`, `groq` (text only) or `none`. Read on every call, so it works as a kill switch. |
+| `GEMINI_API_KEY`, `GROQ_API_KEY` | – | Keys, only ever read from the environment. |
+| `AI_MODEL_PRIMARY` / `AI_MODEL_SECONDARY` | `gemini-3.8-flash` / `gemini-3.5-flash-lite` | Fallback order on HTTP 429/5xx/timeouts: primary → secondary → fallback provider → none (at most 3 requests per call). |
+| `AI_FALLBACK_PROVIDER` / `AI_FALLBACK_MODEL` | `groq` / `openai/gpt-oss-120b` | Text-only fallback, fed the locally extracted text. |
+| `AI_TIMEOUT_SECONDS`, `AI_CALL_DEADLINE_SECONDS` | `45`, `90` | Per request and per call (all attempts). |
+| `AI_DAILY_REQUEST_BUDGET`, `AI_DAILY_PAGE_BUDGET` | `200`, `1000` | When exhausted the AI step is skipped (INFO note on the job). |
+| `AI_TRIGGER_CONFIDENCE`, `ROUTING_MIN_CONFIDENCE` | `0.80`, `0.85` | When extraction asks for help; the confidence READY needs. |
+| `AI_DATA_POLICY`, `AI_PAID_TIER_CONFIRMED` | `synthetic_only`, – | `synthetic_only`: only documents carrying the `SYNTHETIC` stamp line are sent. `allow_real` is refused at startup unless the paid tier is confirmed (Gemini's free tier may use inputs to improve Google's products). |
+
+`GET /api/v1/ai/status` (ADMIN, AUDITOR) shows provider, models, budget use, last error and cache hits — never a key. `POST /api/v1/ai/kill-switch` (ADMIN) engages or releases a runtime switch; `AI_PROVIDER=none` does the same from the environment. An officer clears an unconfirmed suggestion (which otherwise keeps a case out of READY) with `POST /api/v1/documents/{id}/ai-suggestions/review`. `python -m eval.benchmark --ai on|both` runs the synthetic AI evaluation (results and caveats: [docs/TEST_PLAN.md](docs/TEST_PLAN.md)). Opt-in live smoke test: `AI_LIVE_TEST=1 GEMINI_API_KEY=… python -m unittest tests.test_ai_live`. Design and threats: [docs/SECURITY.md](docs/SECURITY.md).
+
 ## Security
-Server-side RBAC with object-level checks, private storage, CSRF header, rate limits, security headers, upload hardening, no language model or document-driven execution, hash-chained audit. Threat model and residual risks: [docs/SECURITY.md](docs/SECURITY.md).
+Server-side RBAC with object-level checks, private storage, CSRF header, rate limits, security headers, upload hardening, hash-chained audit, and document text that is data only (never executed, never an instruction; the optional AI layer is grounded and validated, see above). Threat model and residual risks: [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Docker and deployment
 `docker compose up --build` builds the API image (with Tesseract) and an nginx image that serves the web client and proxies `/api`. **The Docker files were written but not built in the development workspace (no Docker daemon there).** Production guidance, TLS, backups and rollback: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

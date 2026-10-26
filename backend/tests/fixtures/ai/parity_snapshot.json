@@ -1,0 +1,1873 @@
+{
+ "applications": {
+  "Deccan Institute of Technology (Synthetic)": {
+   "documents": {
+    "affidavit": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "70",
+       "page": 1,
+       "raw": "70"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-01-09",
+       "page": 1,
+       "raw": "09-01-2026"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-7742-0004",
+       "page": 1,
+       "raw": "1-SYN-7742-0004"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "300",
+       "page": 1,
+       "raw": "300"
+      }
+     },
+     "detected_type": "affidavit",
+     "verification": null
+    },
+    "building_stability": {
+     "claims": {
+      "built_up_area": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "15400",
+       "page": 1,
+       "raw": "15400"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-01-15",
+       "page": 1,
+       "raw": "15-01-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-7742-0004",
+       "page": 1,
+       "raw": "1-SYN-7742-0004"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "BSC/SYN/2025/3307",
+       "page": 1,
+       "raw": "BSC/SYN/2025/3307"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2030-01-14",
+       "page": 1,
+       "raw": "14-01-2030"
+      }
+     },
+     "detected_type": "building_stability",
+     "verification": "VERIFIED"
+    },
+    "eoa_letter": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-26",
+       "page": 1,
+       "raw": "2025-26"
+      },
+      "application_ref": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-APP-7742-0004",
+       "page": 1,
+       "raw": "1-SYN-APP-7742-0004"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-04-20",
+       "page": 1,
+       "raw": "20-04-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-7742-0004",
+       "page": 1,
+       "raw": "1-SYN-7742-0004"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "300",
+       "page": 1,
+       "raw": "300"
+      }
+     },
+     "detected_type": "eoa_letter",
+     "verification": "VERIFIED"
+    },
+    "faculty_summary": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "70",
+       "page": 1,
+       "raw": "70"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-7742-0004",
+       "page": 1,
+       "raw": "1-SYN-7742-0004"
+      },
+      "student_strength": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1200",
+       "page": 1,
+       "raw": "1200"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "360",
+       "page": 1,
+       "raw": "360"
+      }
+     },
+     "detected_type": "faculty_summary",
+     "verification": null
+    },
+    "fire_noc": {
+     "claims": {
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-04-02",
+       "page": 1,
+       "raw": "02-04-2026"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-7742-0004",
+       "page": 1,
+       "raw": "1-SYN-7742-0004"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "FNOC/SYN/2026/5012",
+       "page": 1,
+       "raw": "FNOC/SYN/2026/5012"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2028-03-31",
+       "page": 1,
+       "raw": "31-03-2028"
+      }
+     },
+     "detected_type": "fire_noc",
+     "verification": "VERIFIED"
+    },
+    "infra_photo": {
+     "claims": {},
+     "detected_type": null,
+     "verification": null
+    }
+   },
+   "findings": [
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Affidavit (EoA format) was found in this application.",
+     "fingerprint": "RULE:DOC.AFFIDAVIT.PRESENT",
+     "fix_doc_type": "affidavit",
+     "remedy": "Upload the notarised affidavit in the prescribed format for the current academic year.",
+     "rule_id": "DOC.AFFIDAVIT.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Affidavit submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Structural stability certificate was found in this application.",
+     "fingerprint": "RULE:DOC.BUILDING.PRESENT",
+     "fix_doc_type": "building_stability",
+     "remedy": "Upload a structural stability certificate from a licensed structural engineer.",
+     "rule_id": "DOC.BUILDING.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Structural stability certificate submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Faculty & student strength summary was found in this application.",
+     "fingerprint": "RULE:DOC.FACULTY.PRESENT",
+     "fix_doc_type": "faculty_summary",
+     "remedy": "Upload the faculty and student strength summary for the current academic year.",
+     "rule_id": "DOC.FACULTY.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Faculty and student strength summary submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Fire safety NOC was found in this application.",
+     "fingerprint": "RULE:DOC.FIRE_NOC.PRESENT",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Upload the fire safety NOC issued by the competent fire authority.",
+     "rule_id": "DOC.FIRE_NOC.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Fire safety NOC submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [
+      {
+       "confidence": 0.98,
+       "doc_type": "fire_noc",
+       "extractor": "text-layer+template",
+       "field": "valid_to",
+       "normalized": "2026-03-31",
+       "page": 1,
+       "value": "31-03-2026"
+      }
+     ],
+     "explanation": "Valid up to 31-03-2026, which is before 01-07-2026 (start of the academic year).",
+     "fingerprint": "RULE:FIRE.VALID",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Upload a renewed fire safety NOC valid beyond the start of the academic year.",
+     "rule_id": "FIRE.VALID",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Fire safety NOC valid at the start of the academic year"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [
+      {
+       "confidence": 0.98,
+       "doc_type": "affidavit",
+       "extractor": "text-layer+template",
+       "field": "total_intake",
+       "normalized": "300",
+       "page": 1,
+       "value": "300"
+      },
+      {
+       "confidence": 0.98,
+       "doc_type": "faculty_summary",
+       "extractor": "text-layer+template",
+       "field": "total_intake",
+       "normalized": "360",
+       "page": 1,
+       "value": "360"
+      }
+     ],
+     "explanation": "The total intake differs: 300 in Affidavit (EoA format); 360 in Faculty & student strength summary.",
+     "fingerprint": "RULE:INTAKE.CONSISTENT",
+     "fix_doc_type": "faculty_summary",
+     "remedy": "Correct the document with the wrong intake and re-upload it.",
+     "rule_id": "INTAKE.CONSISTENT",
+     "severity": "REVIEW",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Intake is the same in the affidavit and the faculty summary"
+    }
+   ],
+   "repair_plan": {
+    "institution_actions": [
+     {
+      "details": [
+       "Correct the document with the wrong intake and re-upload it."
+      ],
+      "doc_type": "faculty_summary",
+      "finding_titles": [
+       "Intake is the same in the affidavit and the faculty summary"
+      ],
+      "id": "INST-faculty_summary",
+      "owner": "INSTITUTION",
+      "priority": 1,
+      "resolves": [
+       "RULE:INTAKE.CONSISTENT"
+      ],
+      "severity": "REVIEW",
+      "step": 1,
+      "title": "Provide a corrected Faculty & student strength summary"
+     }
+    ],
+    "officer_actions": [],
+    "open_findings": 1
+   },
+   "status": "MANUAL_REVIEW_REQUIRED"
+  },
+  "Godavari College of Engineering (Synthetic)": {
+   "documents": {
+    "affidavit": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "68",
+       "page": 1,
+       "raw": "68"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-01-08",
+       "page": 1,
+       "raw": "08-01-2026"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-5520-0002",
+       "page": 1,
+       "raw": "1-SYN-5520-0002"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "300",
+       "page": 1,
+       "raw": "300"
+      }
+     },
+     "detected_type": "affidavit",
+     "verification": null
+    },
+    "eoa_letter": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-26",
+       "page": 1,
+       "raw": "2025-26"
+      },
+      "application_ref": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-APP-5520-0002",
+       "page": 1,
+       "raw": "1-SYN-APP-5520-0002"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-04-22",
+       "page": 1,
+       "raw": "22-04-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-5520-0002",
+       "page": 1,
+       "raw": "1-SYN-5520-0002"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "240",
+       "page": 1,
+       "raw": "240"
+      }
+     },
+     "detected_type": "eoa_letter",
+     "verification": "VERIFIED"
+    },
+    "faculty_summary": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "48",
+       "page": 1,
+       "raw": "48"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-5520-0002",
+       "page": 1,
+       "raw": "1-SYN-5520-0002"
+      },
+      "student_strength": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "960",
+       "page": 1,
+       "raw": "960"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "240",
+       "page": 1,
+       "raw": "240"
+      }
+     },
+     "detected_type": "faculty_summary",
+     "verification": null
+    },
+    "fire_noc": {
+     "claims": {
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2024-04-01",
+       "page": 1,
+       "raw": "01-04-2024"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-5520-0002",
+       "page": 1,
+       "raw": "1-SYN-5520-0002"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "FNOC/SYN/2024/3310",
+       "page": 1,
+       "raw": "FNOC/SYN/2024/3310"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-03-31",
+       "page": 1,
+       "raw": "31-03-2026"
+      }
+     },
+     "detected_type": "fire_noc",
+     "verification": "EXPIRED"
+    },
+    "infra_photo": {
+     "claims": {},
+     "detected_type": null,
+     "verification": null
+    }
+   },
+   "findings": [
+    {
+     "action_owner": "OFFICER",
+     "evidence": [
+      {
+       "confidence": null,
+       "doc_type": "infra_photo",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": null,
+       "value": null
+      },
+      {
+       "confidence": null,
+       "doc_type": "infra_photo",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": null,
+       "value": null
+      }
+     ],
+     "explanation": "This file matches evidence submitted in another institution's application (perceptual match, distance 0/64). Shared facilities or templates can explain this; it needs review, not a conclusion.",
+     "fingerprint": "DUPLICATE:infra_photo:doc_*",
+     "fix_doc_type": "infra_photo",
+     "remedy": "Ask the institution for original, dated evidence or schedule an inspection.",
+     "rule_id": null,
+     "severity": "REVIEW",
+     "source_kind": "DUPLICATE",
+     "state": "OPEN",
+     "title": "Possible reuse of evidence from another application"
+    },
+    {
+     "action_owner": "OFFICER",
+     "evidence": [
+      {
+       "confidence": null,
+       "doc_type": "faculty_summary",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": 1,
+       "value": null
+      }
+     ],
+     "explanation": "Visible number of regular faculty differs from the embedded text in Faculty & student strength summary. This is an indicator that requires verification, not a finding of forgery.",
+     "fingerprint": "INTEGRITY:VISIBLE_TEXT_MISMATCH:faculty_summary:faculty_count",
+     "fix_doc_type": "faculty_summary",
+     "remedy": "Compare with the issuer's copy or an authenticated source before any adverse action.",
+     "rule_id": null,
+     "severity": "REVIEW",
+     "source_kind": "INTEGRITY",
+     "state": "OPEN",
+     "title": "Integrity indicator \u2014 Visible number of regular faculty differs from the embedded text"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Affidavit (EoA format) was found in this application.",
+     "fingerprint": "RULE:DOC.AFFIDAVIT.PRESENT",
+     "fix_doc_type": "affidavit",
+     "remedy": "Upload the notarised affidavit in the prescribed format for the current academic year.",
+     "rule_id": "DOC.AFFIDAVIT.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Affidavit submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Structural stability certificate was found in this application.",
+     "fingerprint": "RULE:DOC.BUILDING.PRESENT",
+     "fix_doc_type": "building_stability",
+     "remedy": "Upload a structural stability certificate from a licensed structural engineer.",
+     "rule_id": "DOC.BUILDING.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Structural stability certificate submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Faculty & student strength summary was found in this application.",
+     "fingerprint": "RULE:DOC.FACULTY.PRESENT",
+     "fix_doc_type": "faculty_summary",
+     "remedy": "Upload the faculty and student strength summary for the current academic year.",
+     "rule_id": "DOC.FACULTY.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Faculty and student strength summary submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Fire safety NOC was found in this application.",
+     "fingerprint": "RULE:DOC.FIRE_NOC.PRESENT",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Upload the fire safety NOC issued by the competent fire authority.",
+     "rule_id": "DOC.FIRE_NOC.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Fire safety NOC submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [
+      {
+       "confidence": 0.98,
+       "doc_type": "affidavit",
+       "extractor": "text-layer+template",
+       "field": "faculty_count",
+       "normalized": "68",
+       "page": 1,
+       "value": "68"
+      },
+      {
+       "confidence": 0.98,
+       "doc_type": "faculty_summary",
+       "extractor": "text-layer+template",
+       "field": "faculty_count",
+       "normalized": "48",
+       "page": 1,
+       "value": "48"
+      }
+     ],
+     "explanation": "The number of regular faculty differs: 48 in Faculty & student strength summary; 68 in Affidavit (EoA format).",
+     "fingerprint": "RULE:FACULTY.CONSISTENT",
+     "fix_doc_type": null,
+     "remedy": "Correct the document with the wrong faculty count and re-upload it.",
+     "rule_id": "FACULTY.CONSISTENT",
+     "severity": "REVIEW",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Faculty count is the same in the affidavit and the faculty summary"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [
+      {
+       "confidence": 0.98,
+       "doc_type": "fire_noc",
+       "extractor": "text-layer+template",
+       "field": "valid_to",
+       "normalized": "2026-03-31",
+       "page": 1,
+       "value": "31-03-2026"
+      }
+     ],
+     "explanation": "Valid up to 31-03-2026, which is before 01-07-2026 (start of the academic year).",
+     "fingerprint": "RULE:FIRE.VALID",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Upload a renewed fire safety NOC valid beyond the start of the academic year.",
+     "rule_id": "FIRE.VALID",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Fire safety NOC valid at the start of the academic year"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [
+      {
+       "confidence": 0.98,
+       "doc_type": "affidavit",
+       "extractor": "text-layer+template",
+       "field": "total_intake",
+       "normalized": "300",
+       "page": 1,
+       "value": "300"
+      },
+      {
+       "confidence": 0.98,
+       "doc_type": "faculty_summary",
+       "extractor": "text-layer+template",
+       "field": "total_intake",
+       "normalized": "240",
+       "page": 1,
+       "value": "240"
+      }
+     ],
+     "explanation": "The total intake differs: 240 in Faculty & student strength summary; 300 in Affidavit (EoA format).",
+     "fingerprint": "RULE:INTAKE.CONSISTENT",
+     "fix_doc_type": "affidavit",
+     "remedy": "Correct the document with the wrong intake and re-upload it.",
+     "rule_id": "INTAKE.CONSISTENT",
+     "severity": "REVIEW",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Intake is the same in the affidavit and the faculty summary"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [
+      {
+       "confidence": 0.98,
+       "doc_type": "affidavit",
+       "extractor": "text-layer+template",
+       "field": "total_intake",
+       "normalized": "300",
+       "page": 1,
+       "value": "300"
+      }
+     ],
+     "explanation": "Condition `sought == approved` is false with sought = 300, approved = 240.",
+     "fingerprint": "RULE:INTAKE.NO_CHANGE",
+     "fix_doc_type": "affidavit",
+     "remedy": "Either correct the intake in the affidavit or apply under the intake-increase category.",
+     "rule_id": "INTAKE.NO_CHANGE",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Intake sought equals approved intake (no-change category)"
+    }
+   ],
+   "repair_plan": {
+    "institution_actions": [
+     {
+      "details": [
+       "The number of regular faculty differs: 48 in Faculty & student strength summary; 68 in Affidavit (EoA format).",
+       "Correct the document with the wrong faculty count and re-upload it."
+      ],
+      "doc_type": null,
+      "finding_titles": [
+       "Faculty count is the same in the affidavit and the faculty summary"
+      ],
+      "id": "INST-RULE:FACULTY.CONSISTENT",
+      "owner": "INSTITUTION",
+      "priority": 1,
+      "resolves": [
+       "RULE:FACULTY.CONSISTENT"
+      ],
+      "severity": "REVIEW",
+      "step": 4,
+      "title": "Resolve the conflict between Affidavit (EoA format) and Faculty & student strength summary"
+     },
+     {
+      "details": [
+       "Correct the document with the wrong intake and re-upload it.",
+       "Either correct the intake in the affidavit or apply under the intake-increase category."
+      ],
+      "doc_type": "affidavit",
+      "finding_titles": [
+       "Intake sought equals approved intake (no-change category)",
+       "Intake is the same in the affidavit and the faculty summary"
+      ],
+      "id": "INST-affidavit",
+      "owner": "INSTITUTION",
+      "priority": 4,
+      "resolves": [
+       "RULE:INTAKE.CONSISTENT",
+       "RULE:INTAKE.NO_CHANGE"
+      ],
+      "severity": "DEFICIENCY",
+      "step": 1,
+      "title": "Provide a corrected Affidavit (EoA format)"
+     },
+     {
+      "details": [
+       "Upload a structural stability certificate from a licensed structural engineer."
+      ],
+      "doc_type": "building_stability",
+      "finding_titles": [
+       "Structural stability certificate submitted"
+      ],
+      "id": "INST-building_stability",
+      "owner": "INSTITUTION",
+      "priority": 3,
+      "resolves": [
+       "RULE:DOC.BUILDING.PRESENT"
+      ],
+      "severity": "DEFICIENCY",
+      "step": 3,
+      "title": "Upload the Structural stability certificate"
+     },
+     {
+      "details": [
+       "Upload a renewed fire safety NOC valid beyond the start of the academic year."
+      ],
+      "doc_type": "fire_noc",
+      "finding_titles": [
+       "Fire safety NOC valid at the start of the academic year"
+      ],
+      "id": "INST-fire_noc",
+      "owner": "INSTITUTION",
+      "priority": 3,
+      "resolves": [
+       "RULE:FIRE.VALID"
+      ],
+      "severity": "DEFICIENCY",
+      "step": 2,
+      "title": "Upload a renewed Fire safety NOC"
+     }
+    ],
+    "officer_actions": [
+     {
+      "details": [
+       "This file matches evidence submitted in another institution's application (perceptual match, distance 0/64). Shared facilities or templates can explain this; it needs review, not a conclusion."
+      ],
+      "doc_type": "infra_photo",
+      "finding_titles": [
+       "Possible reuse of evidence from another application"
+      ],
+      "id": "OFF-DUPLICATE:infra_photo:doc_*",
+      "owner": "OFFICER",
+      "priority": 1,
+      "resolves": [
+       "DUPLICATE:infra_photo:doc_*"
+      ],
+      "severity": "REVIEW",
+      "step": 1,
+      "title": "Ask the institution for original, dated evidence or schedule an inspection."
+     },
+     {
+      "details": [
+       "Visible number of regular faculty differs from the embedded text in Faculty & student strength summary. This is an indicator that requires verification, not a finding of forgery."
+      ],
+      "doc_type": "faculty_summary",
+      "finding_titles": [
+       "Integrity indicator \u2014 Visible number of regular faculty differs from the embedded text"
+      ],
+      "id": "OFF-INTEGRITY:VISIBLE_TEXT_MISMATCH:faculty_summary:faculty_count",
+      "owner": "OFFICER",
+      "priority": 1,
+      "resolves": [
+       "INTEGRITY:VISIBLE_TEXT_MISMATCH:faculty_summary:faculty_count"
+      ],
+      "severity": "REVIEW",
+      "step": 2,
+      "title": "Compare with the issuer's copy or an authenticated source before any adverse action."
+     }
+    ],
+    "open_findings": 7
+   },
+   "status": "DEFICIENCIES_FLAGGED"
+  },
+  "Krishna Institute of Engineering (Synthetic)": {
+   "documents": {
+    "affidavit": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.95,
+       "extractor": "ocr+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.96,
+       "extractor": "ocr+template",
+       "norm": "45",
+       "page": 1,
+       "raw": "45"
+      },
+      "issue_date": {
+       "confidence": 0.96,
+       "extractor": "ocr+template",
+       "norm": "2026-01-12",
+       "page": 1,
+       "raw": "12-01-2026"
+      },
+      "permanent_id": {
+       "confidence": 0.9,
+       "extractor": "ocr+template",
+       "norm": "1-SYN-6631-0003",
+       "page": 1,
+       "raw": "1-SYN-6631-0003"
+      },
+      "total_intake": {
+       "confidence": 0.96,
+       "extractor": "ocr+template",
+       "norm": "180",
+       "page": 1,
+       "raw": "180"
+      }
+     },
+     "detected_type": "affidavit",
+     "verification": null
+    },
+    "building_stability": {
+     "claims": {
+      "built_up_area": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "9100",
+       "page": 1,
+       "raw": "9100"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2023-08-01",
+       "page": 1,
+       "raw": "01-08-2023"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-6631-0003",
+       "page": 1,
+       "raw": "1-SYN-6631-0003"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "BSC/SYN-KA/2023/0099",
+       "page": 1,
+       "raw": "BSC/SYN-KA/2023/0099"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2028-07-31",
+       "page": 1,
+       "raw": "31-07-2028"
+      }
+     },
+     "detected_type": "building_stability",
+     "verification": "SOURCE_UNAVAILABLE"
+    },
+    "eoa_letter": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-26",
+       "page": 1,
+       "raw": "2025-26"
+      },
+      "application_ref": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-APP-6631-0003",
+       "page": 1,
+       "raw": "1-SYN-APP-6631-0003"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-05-02",
+       "page": 1,
+       "raw": "02-05-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-6631-0003",
+       "page": 1,
+       "raw": "1-SYN-6631-0003"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "240",
+       "page": 1,
+       "raw": "240"
+      }
+     },
+     "detected_type": "eoa_letter",
+     "verification": "MISMATCH_DETECTED"
+    },
+    "faculty_summary": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "45",
+       "page": 1,
+       "raw": "45"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-6631-0003",
+       "page": 1,
+       "raw": "1-SYN-6631-0003"
+      },
+      "student_strength": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "720",
+       "page": 1,
+       "raw": "720"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "180",
+       "page": 1,
+       "raw": "180"
+      }
+     },
+     "detected_type": "faculty_summary",
+     "verification": null
+    },
+    "fire_noc": {
+     "claims": {
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-06-01",
+       "page": 1,
+       "raw": "01-06-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-6631-0003",
+       "page": 1,
+       "raw": "1-SYN-6631-0003"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "FNOC/SYN/2025/9902",
+       "page": 1,
+       "raw": "FNOC/SYN/2025/9902"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2028-03-31",
+       "page": 1,
+       "raw": "31-03-2028"
+      }
+     },
+     "detected_type": "fire_noc",
+     "verification": "MISMATCH_DETECTED"
+    },
+    "infra_photo": {
+     "claims": {},
+     "detected_type": null,
+     "verification": null
+    }
+   },
+   "findings": [
+    {
+     "action_owner": "OFFICER",
+     "evidence": [
+      {
+       "confidence": null,
+       "doc_type": "infra_photo",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": null,
+       "value": null
+      },
+      {
+       "confidence": null,
+       "doc_type": "infra_photo",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": null,
+       "value": null
+      }
+     ],
+     "explanation": "This file matches evidence submitted in another institution's application (perceptual match, distance 0/64). Shared facilities or templates can explain this; it needs review, not a conclusion.",
+     "fingerprint": "DUPLICATE:infra_photo:doc_*",
+     "fix_doc_type": "infra_photo",
+     "remedy": "Ask the institution for original, dated evidence or schedule an inspection.",
+     "rule_id": null,
+     "severity": "REVIEW",
+     "source_kind": "DUPLICATE",
+     "state": "OPEN",
+     "title": "Possible reuse of evidence from another application"
+    },
+    {
+     "action_owner": "OFFICER",
+     "evidence": [
+      {
+       "confidence": null,
+       "doc_type": "building_stability",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": null,
+       "value": null
+      }
+     ],
+     "explanation": "File was modified after it was first produced in Structural stability certificate. This is an indicator that requires verification, not a finding of forgery.",
+     "fingerprint": "INTEGRITY:INCREMENTAL_UPDATE:building_stability:",
+     "fix_doc_type": "building_stability",
+     "remedy": "Compare with the issuer's copy or an authenticated source before any adverse action.",
+     "rule_id": null,
+     "severity": "REVIEW",
+     "source_kind": "INTEGRITY",
+     "state": "OPEN",
+     "title": "Integrity indicator \u2014 File was modified after it was first produced"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Affidavit (EoA format) was found in this application.",
+     "fingerprint": "RULE:DOC.AFFIDAVIT.PRESENT",
+     "fix_doc_type": "affidavit",
+     "remedy": "Upload the notarised affidavit in the prescribed format for the current academic year.",
+     "rule_id": "DOC.AFFIDAVIT.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Affidavit submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Structural stability certificate was found in this application.",
+     "fingerprint": "RULE:DOC.BUILDING.PRESENT",
+     "fix_doc_type": "building_stability",
+     "remedy": "Upload a structural stability certificate from a licensed structural engineer.",
+     "rule_id": "DOC.BUILDING.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Structural stability certificate submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Faculty & student strength summary was found in this application.",
+     "fingerprint": "RULE:DOC.FACULTY.PRESENT",
+     "fix_doc_type": "faculty_summary",
+     "remedy": "Upload the faculty and student strength summary for the current academic year.",
+     "rule_id": "DOC.FACULTY.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Faculty and student strength summary submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Fire safety NOC was found in this application.",
+     "fingerprint": "RULE:DOC.FIRE_NOC.PRESENT",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Upload the fire safety NOC issued by the competent fire authority.",
+     "rule_id": "DOC.FIRE_NOC.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Fire safety NOC submitted"
+    },
+    {
+     "action_owner": "OFFICER",
+     "evidence": [
+      {
+       "confidence": 0.98,
+       "doc_type": "eoa_letter",
+       "extractor": "text-layer+template",
+       "field": "total_intake",
+       "normalized": "240",
+       "page": 1,
+       "value": "240"
+      }
+     ],
+     "explanation": "The total intake differs: 180 in AICTE records; 240 in Previous Extension of Approval letter.",
+     "fingerprint": "RULE:INTAKE.LETTER_VS_RECORD",
+     "fix_doc_type": "eoa_letter",
+     "remedy": "Clarify the difference between the letter and AICTE records; AICTE records prevail.",
+     "rule_id": "INTAKE.LETTER_VS_RECORD",
+     "severity": "REVIEW",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Intake on the EoA letter matches AICTE records"
+    },
+    {
+     "action_owner": "OFFICER",
+     "evidence": [
+      {
+       "confidence": null,
+       "doc_type": "building_stability",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": null,
+       "value": null
+      }
+     ],
+     "explanation": "No automated source could confirm this document (status: SOURCE_UNAVAILABLE). Manual confirmation needed.",
+     "fingerprint": "RULE:VERIFY.BUILDING",
+     "fix_doc_type": "building_stability",
+     "remedy": "Confirm the certificate with the issuing engineer or registry.",
+     "rule_id": "VERIFY.BUILDING",
+     "severity": "REVIEW",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Manual check needed \u2014 Structural stability certificate confirmed with its issuer"
+    },
+    {
+     "action_owner": "OFFICER",
+     "evidence": [
+      {
+       "confidence": null,
+       "doc_type": "fire_noc",
+       "extractor": null,
+       "field": null,
+       "normalized": null,
+       "page": null,
+       "value": null
+      }
+     ],
+     "explanation": "The issuing source reports values that differ from the uploaded document.",
+     "fingerprint": "RULE:VERIFY.FIRE_NOC",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Confirm the certificate with the issuing fire authority.",
+     "rule_id": "VERIFY.FIRE_NOC",
+     "severity": "REVIEW",
+     "source_kind": "RULE",
+     "state": "OPEN",
+     "title": "Fire safety NOC confirmed with its issuer"
+    }
+   ],
+   "repair_plan": {
+    "institution_actions": [],
+    "officer_actions": [
+     {
+      "details": [
+       "This file matches evidence submitted in another institution's application (perceptual match, distance 0/64). Shared facilities or templates can explain this; it needs review, not a conclusion."
+      ],
+      "doc_type": "infra_photo",
+      "finding_titles": [
+       "Possible reuse of evidence from another application"
+      ],
+      "id": "OFF-DUPLICATE:infra_photo:doc_*",
+      "owner": "OFFICER",
+      "priority": 1,
+      "resolves": [
+       "DUPLICATE:infra_photo:doc_*"
+      ],
+      "severity": "REVIEW",
+      "step": 1,
+      "title": "Ask the institution for original, dated evidence or schedule an inspection."
+     },
+     {
+      "details": [
+       "File was modified after it was first produced in Structural stability certificate. This is an indicator that requires verification, not a finding of forgery."
+      ],
+      "doc_type": "building_stability",
+      "finding_titles": [
+       "Integrity indicator \u2014 File was modified after it was first produced"
+      ],
+      "id": "OFF-INTEGRITY:INCREMENTAL_UPDATE:building_stability:",
+      "owner": "OFFICER",
+      "priority": 1,
+      "resolves": [
+       "INTEGRITY:INCREMENTAL_UPDATE:building_stability:"
+      ],
+      "severity": "REVIEW",
+      "step": 3,
+      "title": "Compare with the issuer's copy or an authenticated source before any adverse action."
+     },
+     {
+      "details": [
+       "The total intake differs: 180 in AICTE records; 240 in Previous Extension of Approval letter."
+      ],
+      "doc_type": "eoa_letter",
+      "finding_titles": [
+       "Intake on the EoA letter matches AICTE records"
+      ],
+      "id": "OFF-RULE:INTAKE.LETTER_VS_RECORD",
+      "owner": "OFFICER",
+      "priority": 1,
+      "resolves": [
+       "RULE:INTAKE.LETTER_VS_RECORD"
+      ],
+      "severity": "REVIEW",
+      "step": 2,
+      "title": "Clarify the difference between the letter and AICTE records; AICTE records prevail."
+     },
+     {
+      "details": [
+       "No automated source could confirm this document (status: SOURCE_UNAVAILABLE). Manual confirmation needed."
+      ],
+      "doc_type": "building_stability",
+      "finding_titles": [
+       "Manual check needed \u2014 Structural stability certificate confirmed with its issuer"
+      ],
+      "id": "OFF-RULE:VERIFY.BUILDING",
+      "owner": "OFFICER",
+      "priority": 1,
+      "resolves": [
+       "RULE:VERIFY.BUILDING"
+      ],
+      "severity": "REVIEW",
+      "step": 4,
+      "title": "Confirm the certificate with the issuing engineer or registry."
+     },
+     {
+      "details": [
+       "The issuing source reports values that differ from the uploaded document."
+      ],
+      "doc_type": "fire_noc",
+      "finding_titles": [
+       "Fire safety NOC confirmed with its issuer"
+      ],
+      "id": "OFF-RULE:VERIFY.FIRE_NOC",
+      "owner": "OFFICER",
+      "priority": 1,
+      "resolves": [
+       "RULE:VERIFY.FIRE_NOC"
+      ],
+      "severity": "REVIEW",
+      "step": 5,
+      "title": "Confirm the certificate with the issuing fire authority."
+     }
+    ],
+    "open_findings": 5
+   },
+   "status": "MANUAL_REVIEW_REQUIRED"
+  },
+  "Shakti Institute of Technology (Synthetic)": {
+   "documents": {
+    "affidavit": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "85",
+       "page": 1,
+       "raw": "85"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-01-05",
+       "page": 1,
+       "raw": "05-01-2026"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4417-0001",
+       "page": 1,
+       "raw": "1-SYN-4417-0001"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "360",
+       "page": 1,
+       "raw": "360"
+      }
+     },
+     "detected_type": "affidavit",
+     "verification": null
+    },
+    "building_stability": {
+     "claims": {
+      "built_up_area": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "18250",
+       "page": 1,
+       "raw": "18250"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2024-02-10",
+       "page": 1,
+       "raw": "10-02-2024"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4417-0001",
+       "page": 1,
+       "raw": "1-SYN-4417-0001"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "BSC/SYN/2024/2210",
+       "page": 1,
+       "raw": "BSC/SYN/2024/2210"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2029-02-09",
+       "page": 1,
+       "raw": "09-02-2029"
+      }
+     },
+     "detected_type": "building_stability",
+     "verification": "VERIFIED"
+    },
+    "eoa_letter": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-26",
+       "page": 1,
+       "raw": "2025-26"
+      },
+      "application_ref": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-APP-4417-0001",
+       "page": 1,
+       "raw": "1-SYN-APP-4417-0001"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-04-15",
+       "page": 1,
+       "raw": "15-04-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4417-0001",
+       "page": 1,
+       "raw": "1-SYN-4417-0001"
+      },
+      "print_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-09-12",
+       "page": 1,
+       "raw": "12 September 2026"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "360",
+       "page": 1,
+       "raw": "360"
+      }
+     },
+     "detected_type": "eoa_letter",
+     "verification": "VERIFIED"
+    },
+    "faculty_summary": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "85",
+       "page": 1,
+       "raw": "85"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4417-0001",
+       "page": 1,
+       "raw": "1-SYN-4417-0001"
+      },
+      "student_strength": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1440",
+       "page": 1,
+       "raw": "1440"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "360",
+       "page": 1,
+       "raw": "360"
+      }
+     },
+     "detected_type": "faculty_summary",
+     "verification": null
+    },
+    "fire_noc": {
+     "claims": {
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-04-01",
+       "page": 1,
+       "raw": "01-04-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4417-0001",
+       "page": 1,
+       "raw": "1-SYN-4417-0001"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "FNOC/SYN/2025/7781",
+       "page": 1,
+       "raw": "FNOC/SYN/2025/7781"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2027-03-31",
+       "page": 1,
+       "raw": "31-03-2027"
+      }
+     },
+     "detected_type": "fire_noc",
+     "verification": "VERIFIED"
+    },
+    "infra_photo": {
+     "claims": {},
+     "detected_type": null,
+     "verification": null
+    }
+   },
+   "findings": [
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Affidavit (EoA format) was found in this application.",
+     "fingerprint": "RULE:DOC.AFFIDAVIT.PRESENT",
+     "fix_doc_type": "affidavit",
+     "remedy": "Upload the notarised affidavit in the prescribed format for the current academic year.",
+     "rule_id": "DOC.AFFIDAVIT.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Affidavit submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Structural stability certificate was found in this application.",
+     "fingerprint": "RULE:DOC.BUILDING.PRESENT",
+     "fix_doc_type": "building_stability",
+     "remedy": "Upload a structural stability certificate from a licensed structural engineer.",
+     "rule_id": "DOC.BUILDING.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Structural stability certificate submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Faculty & student strength summary was found in this application.",
+     "fingerprint": "RULE:DOC.FACULTY.PRESENT",
+     "fix_doc_type": "faculty_summary",
+     "remedy": "Upload the faculty and student strength summary for the current academic year.",
+     "rule_id": "DOC.FACULTY.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Faculty and student strength summary submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Fire safety NOC was found in this application.",
+     "fingerprint": "RULE:DOC.FIRE_NOC.PRESENT",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Upload the fire safety NOC issued by the competent fire authority.",
+     "rule_id": "DOC.FIRE_NOC.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Fire safety NOC submitted"
+    }
+   ],
+   "repair_plan": {
+    "institution_actions": [],
+    "officer_actions": [],
+    "open_findings": 0
+   },
+   "status": "READY_FOR_SCRUTINY"
+  },
+  "Shakti Women's Engineering College (Synthetic)": {
+   "documents": {
+    "affidavit": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "40",
+       "page": 1,
+       "raw": "40"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-01-06",
+       "page": 1,
+       "raw": "06-01-2026"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4418-0005",
+       "page": 1,
+       "raw": "1-SYN-4418-0005"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "180",
+       "page": 1,
+       "raw": "180"
+      }
+     },
+     "detected_type": "affidavit",
+     "verification": null
+    },
+    "building_stability": {
+     "claims": {
+      "built_up_area": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "8600",
+       "page": 1,
+       "raw": "8600"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2024-02-12",
+       "page": 1,
+       "raw": "12-02-2024"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4418-0005",
+       "page": 1,
+       "raw": "1-SYN-4418-0005"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "BSC/SYN/2024/2214",
+       "page": 1,
+       "raw": "BSC/SYN/2024/2214"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2029-02-11",
+       "page": 1,
+       "raw": "11-02-2029"
+      }
+     },
+     "detected_type": "building_stability",
+     "verification": "VERIFIED"
+    },
+    "eoa_letter": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-26",
+       "page": 1,
+       "raw": "2025-26"
+      },
+      "application_ref": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-APP-4418-0005",
+       "page": 1,
+       "raw": "1-SYN-APP-4418-0005"
+      },
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-04-18",
+       "page": 1,
+       "raw": "18-04-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4418-0005",
+       "page": 1,
+       "raw": "1-SYN-4418-0005"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "180",
+       "page": 1,
+       "raw": "180"
+      }
+     },
+     "detected_type": "eoa_letter",
+     "verification": "VERIFIED"
+    },
+    "faculty_summary": {
+     "claims": {
+      "academic_year": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2026-27",
+       "page": 1,
+       "raw": "2026-27"
+      },
+      "faculty_count": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "40",
+       "page": 1,
+       "raw": "40"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4418-0005",
+       "page": 1,
+       "raw": "1-SYN-4418-0005"
+      },
+      "student_strength": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "720",
+       "page": 1,
+       "raw": "720"
+      },
+      "total_intake": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "180",
+       "page": 1,
+       "raw": "180"
+      }
+     },
+     "detected_type": "faculty_summary",
+     "verification": null
+    },
+    "fire_noc": {
+     "claims": {
+      "issue_date": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2025-04-03",
+       "page": 1,
+       "raw": "03-04-2025"
+      },
+      "permanent_id": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "1-SYN-4418-0005",
+       "page": 1,
+       "raw": "1-SYN-4418-0005"
+      },
+      "ref_no": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "FNOC/SYN/2025/7790",
+       "page": 1,
+       "raw": "FNOC/SYN/2025/7790"
+      },
+      "valid_to": {
+       "confidence": 0.98,
+       "extractor": "text-layer+template",
+       "norm": "2027-03-31",
+       "page": 1,
+       "raw": "31-03-2027"
+      }
+     },
+     "detected_type": "fire_noc",
+     "verification": "VERIFIED"
+    },
+    "infra_photo": {
+     "claims": {},
+     "detected_type": null,
+     "verification": null
+    }
+   },
+   "findings": [
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Affidavit (EoA format) was found in this application.",
+     "fingerprint": "RULE:DOC.AFFIDAVIT.PRESENT",
+     "fix_doc_type": "affidavit",
+     "remedy": "Upload the notarised affidavit in the prescribed format for the current academic year.",
+     "rule_id": "DOC.AFFIDAVIT.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Affidavit submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Structural stability certificate was found in this application.",
+     "fingerprint": "RULE:DOC.BUILDING.PRESENT",
+     "fix_doc_type": "building_stability",
+     "remedy": "Upload a structural stability certificate from a licensed structural engineer.",
+     "rule_id": "DOC.BUILDING.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Structural stability certificate submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Faculty & student strength summary was found in this application.",
+     "fingerprint": "RULE:DOC.FACULTY.PRESENT",
+     "fix_doc_type": "faculty_summary",
+     "remedy": "Upload the faculty and student strength summary for the current academic year.",
+     "rule_id": "DOC.FACULTY.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Faculty and student strength summary submitted"
+    },
+    {
+     "action_owner": "INSTITUTION",
+     "evidence": [],
+     "explanation": "No Fire safety NOC was found in this application.",
+     "fingerprint": "RULE:DOC.FIRE_NOC.PRESENT",
+     "fix_doc_type": "fire_noc",
+     "remedy": "Upload the fire safety NOC issued by the competent fire authority.",
+     "rule_id": "DOC.FIRE_NOC.PRESENT",
+     "severity": "DEFICIENCY",
+     "source_kind": "RULE",
+     "state": "RESOLVED",
+     "title": "Fire safety NOC submitted"
+    }
+   ],
+   "repair_plan": {
+    "institution_actions": [],
+    "officer_actions": [],
+    "open_findings": 0
+   },
+   "status": "READY_FOR_SCRUTINY"
+  }
+ }
+}

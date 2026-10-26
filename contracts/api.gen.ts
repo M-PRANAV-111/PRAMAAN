@@ -29,16 +29,12 @@ export type StageCode = "QUEUED" | "READING" | "FINGERPRINTING" | "EXTRACTING_TE
 export const STAGE_CODE_VALUES = ["QUEUED", "READING", "FINGERPRINTING", "EXTRACTING_TEXT", "EXTRACTING_FIELDS", "AI_EXTRACTION", "INTEGRITY", "VERIFYING", "RULES", "ROUTING", "DONE", "FAILED"] as const;
 export type VerificationStatus = "VERIFIED" | "MISMATCH_DETECTED" | "EXPIRED" | "VERIFICATION_PENDING" | "SOURCE_UNAVAILABLE" | "MANUAL_REVIEW_REQUIRED";
 export const VERIFICATION_STATUS_VALUES = ["VERIFIED", "MISMATCH_DETECTED", "EXPIRED", "VERIFICATION_PENDING", "SOURCE_UNAVAILABLE", "MANUAL_REVIEW_REQUIRED"] as const;
-
-export interface AIStatusOut {
-  provider: string;
-  model: string | null;
-  mode: "disabled" | "simulated" | "synthetic_only";
-  usage: number;
-  budget: number;
-  last_error: string | null;
-  fallback_active: boolean;
-}
+export type AiMode = "off" | "synthetic_only" | "allow_real";
+export const AI_MODE_VALUES = ["off", "synthetic_only", "allow_real"] as const;
+export type AiProviderName = "none" | "gemini" | "groq" | "fixture";
+export const AI_PROVIDER_NAME_VALUES = ["none", "gemini", "groq", "fixture"] as const;
+export type RoutingOutcome = "READY_FOR_SCRUTINY" | "CORRECTIONS_REQUIRED" | "OFFICER_REVIEW_REQUIRED";
+export const ROUTING_OUTCOME_VALUES = ["READY_FOR_SCRUTINY", "CORRECTIONS_REQUIRED", "OFFICER_REVIEW_REQUIRED"] as const;
 
 export interface AcceptInvitationRequest {
   token: string;
@@ -83,12 +79,38 @@ export interface AdminUserOut {
   created_at: string;
 }
 
+export interface AiBudgetOut {
+  requests: number;
+  pages: number;
+}
+
+export interface AiStatusOut {
+  provider: "none" | "gemini" | "groq" | "fixture";
+  models: Record<string, string>;
+  mode: "off" | "synthetic_only" | "allow_real";
+  kill_switch: boolean;
+  requests_today: number;
+  budget: AiBudgetOut;
+  pages_today: number;
+  last_error_code?: string | null;
+  last_error_at?: string | null;
+  fallback_active: boolean;
+  cache_hits_today: number;
+  simulated?: boolean;
+}
+
 export interface AiSuggestionOut {
   field: string;
   value: string;
   page?: number | null;
   reason: "not_found_on_page" | "conflicts_with_page" | "low_confidence";
   model: string;
+}
+
+export interface AiSuggestionReview {
+  field: string;
+  decision: "CONFIRM" | "DISMISS";
+  reason: string;
 }
 
 export interface ApplicationCreate {
@@ -152,6 +174,12 @@ export interface AuditVerifyOut {
   first_broken_seq: number | null;
   problem: string | null;
   head_hash: string | null;
+}
+
+export interface AutomatedActionOut {
+  type: string;
+  summary: string;
+  notified?: number | null;
 }
 
 export interface BackupsOut {
@@ -328,6 +356,13 @@ export interface InvitationRequest {
   role: "OFFICER" | "ADMIN" | "AUDITOR";
 }
 
+export interface JobNoteOut {
+  id: string;
+  level: "INFO";
+  text: string;
+  created_at: string;
+}
+
 export interface JobOut {
   ai_notes?: string[];
   stage_history?: ("QUEUED" | "READING" | "FINGERPRINTING" | "EXTRACTING_TEXT" | "EXTRACTING_FIELDS" | "AI_EXTRACTION" | "INTEGRITY" | "VERIFYING" | "RULES" | "ROUTING" | "DONE" | "FAILED")[];
@@ -341,6 +376,11 @@ export interface JobOut {
   error: string | null;
   document_id: string | null;
   application_id: string;
+}
+
+export interface KillSwitchRequest {
+  engaged: boolean;
+  reason: string;
 }
 
 export interface LoginRequest {
@@ -458,14 +498,18 @@ export interface ReviewRequest {
 }
 
 export interface RoutingOut {
-  outcome: "READY_FOR_SCRUTINY" | "DEFICIENCIES_FLAGGED" | "MANUAL_REVIEW_REQUIRED";
-  reasons: RoutingReason[];
-  advisory?: true;
+  outcome: "READY_FOR_SCRUTINY" | "CORRECTIONS_REQUIRED" | "OFFICER_REVIEW_REQUIRED";
+  reasons: RoutingReasonOut[];
+  automated_actions: AutomatedActionOut[];
+  run_id?: string | null;
+  computed_at: string;
+  ai_used: boolean;
+  policy_version: string;
 }
 
-export interface RoutingReason {
+export interface RoutingReasonOut {
+  code: string;
   text: string;
-  link: string;
   finding_id?: string | null;
   document_id?: string | null;
 }
@@ -668,7 +712,10 @@ export const endpoints = {
   respondToFinding: { method: "POST", path: "/api/v1/findings/{finding_id}/responses" },
   applicationReport: { method: "GET", path: "/api/v1/applications/{application_id}/report" },
   aiStatus: { method: "GET", path: "/api/v1/ai/status" },
+  aiKillSwitch: { method: "POST", path: "/api/v1/ai/kill-switch" },
   applicationRouting: { method: "GET", path: "/api/v1/applications/{application_id}/routing" },
+  jobNotes: { method: "GET", path: "/api/v1/jobs/{job_id}/notes" },
+  reviewAiSuggestion: { method: "POST", path: "/api/v1/documents/{document_id}/ai-suggestions/review" },
 } as const;
 
 export interface EndpointTypes {
@@ -728,7 +775,10 @@ export interface EndpointTypes {
   documentHistory: { response: DocumentOut[]; body: undefined };
   respondToFinding: { response: ResponseOut; body: ResponseRequest };
   applicationReport: { response: Blob; body: undefined };
-  aiStatus: { response: AIStatusOut; body: undefined };
+  aiStatus: { response: AiStatusOut; body: undefined };
+  aiKillSwitch: { response: AiStatusOut; body: KillSwitchRequest };
   applicationRouting: { response: RoutingOut; body: undefined };
+  jobNotes: { response: JobNoteOut[]; body: undefined };
+  reviewAiSuggestion: { response: OkOut; body: AiSuggestionReview };
 }
 export type EndpointName = keyof typeof endpoints;

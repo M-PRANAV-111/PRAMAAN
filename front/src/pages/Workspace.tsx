@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import {
-  api, ApiError, pageImageUrl, type ApplicationDetail, type ChecklistItemOut, type FindingOut, type JobOut, type RepairAction, type ReviewDecision,
+  api, ApiError, pageImageUrl, type AiSuggestionOut, type ApplicationDetail, type ChecklistItemOut, type FindingOut, type JobOut, type RepairAction,
+  type ReviewDecision,
   type VerificationOut,
 } from "../api/client";
 import { PageHeader } from "../components/AppShell";
@@ -11,7 +12,8 @@ import { UploadSlot } from "../components/UploadSlot";
 import { Dialog, Empty, ErrorBox, Pill, SimulatedTag, Skeleton, Spinner, cx, useToast } from "../components/ui";
 import { callEndpoint, hasEndpoint, useFeatures } from "../lib/features";
 import {
-  CHANNEL_LABEL, FINDING_STATE_LABEL, SEVERITY_META, STATUS_META, VERIFICATION_META, fmtBytes, fmtDate, label, plural,
+  CHANNEL_LABEL, FINDING_STATE_LABEL, SEVERITY_META, STATUS_META, SUGGESTION_REASON, VERIFICATION_META, extractorLabel, fmtBytes, fmtDate,
+  label, plural,
 } from "../lib/format";
 import { invalidate, useQuery } from "../lib/query";
 import { navigate, useQueryParam } from "../lib/router";
@@ -534,13 +536,15 @@ function DocumentsTab({
           );
         })}
       </ul>
-      {open && <DocumentDialog documentId={open} onClose={() => setOpen(null)} />}
+      {open && <DocumentDialog documentId={open} applicationId={a.id} onClose={() => setOpen(null)} />}
     </>
   );
 }
 
-function DocumentDialog({ documentId, onClose }: { documentId: string; onClose: () => void }) {
+function DocumentDialog({ documentId, applicationId, onClose }: { documentId: string; applicationId: string; onClose: () => void }) {
   const ev = useQuery(`evidence:${documentId}`, () => api("documentEvidence", { path: { document_id: documentId } }));
+  const { user } = useSession();
+  const canReviewSuggestions = (user?.role === "OFFICER" || user?.role === "ADMIN") && hasEndpoint("reviewAiSuggestion");
   const [activeClaim, setActiveClaim] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const d = ev.data;
@@ -564,13 +568,27 @@ function DocumentDialog({ documentId, onClose }: { documentId: string; onClose: 
                         onClick={() => { setActiveClaim(c.id); setPage(c.page); }}>
                         <td className="py-1.5 pr-2">{label(c.field)}</td>
                         <td className="pr-2 font-semibold">{c.value_raw}</td>
-                        <td className="text-ink-soft">{c.extractor.startsWith("ocr") ? "OCR" : "Text layer"} {Math.round(c.confidence * 100)}%, p.{c.page}</td>
+                        <td className="text-ink-soft">{extractorLabel(c.extractor)} {Math.round(c.confidence * 100)}%, p.{c.page}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               )}
             </section>
+            {(d.ai_suggestions ?? []).length > 0 && (
+              <section data-ai-suggestions>
+                <h3 className="mb-1 text-base">AI suggestions — not used by any rule</h3>
+                <p className="mb-2 text-xs text-ink-soft">The values below could not be matched to this page. Routing waits for an officer to confirm or dismiss them.</p>
+                <ul className="grid gap-2 text-sm">
+                  {(d.ai_suggestions ?? []).map((s) => (
+                    <li key={s.field} className="rounded-sm bg-paper px-3 py-2">
+                      <div><span className="font-semibold">{label(s.field)}: {s.value}</span> <span className="text-turmeric">— {SUGGESTION_REASON[s.reason]}</span>{s.page ? <span className="text-ink-soft">, p.{s.page}</span> : null}</div>
+                      {canReviewSuggestions && <SuggestionReviewForm documentId={d.document.id} applicationId={applicationId} suggestion={s} />}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             <section>
               <h3 className="mb-2 text-base">Source verification</h3>
               {d.verifications.length === 0 ? <p className="text-sm text-ink-soft">No issuing source applies to this document type.</p> : (
@@ -594,6 +612,41 @@ function DocumentDialog({ documentId, onClose }: { documentId: string; onClose: 
         </div>
       )}
     </Dialog>
+  );
+}
+
+function SuggestionReviewForm({ documentId, applicationId, suggestion }: { documentId: string; applicationId: string; suggestion: AiSuggestionOut }) {
+  const toast = useToast();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  async function decide(decision: "CONFIRM" | "DISMISS") {
+    setPending(true);
+    setError(null);
+    try {
+      await callEndpoint("reviewAiSuggestion", { path: { document_id: documentId }, body: { field: suggestion.field, decision, reason: reason.trim() } });
+      invalidate(`evidence:${documentId}`);
+      invalidate(`routing:${applicationId}`);
+      toast(decision === "CONFIRM" ? "Suggestion confirmed in the audit trail" : "Suggestion dismissed in the audit trail");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not record the review.");
+    } finally {
+      setPending(false);
+    }
+  }
+  const ready = reason.trim().length >= 10 && !pending;
+  return (
+    <div className="mt-2 grid gap-2">
+      <label className="field">
+        <span>Reason for {label(suggestion.field)} (recorded with your name)</span>
+        <textarea className="input" value={reason} minLength={10} maxLength={2000} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)} />
+      </label>
+      {error && <p role="alert" className="text-sm font-semibold text-ink">{error}</p>}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className="btn btn-quiet min-h-8 px-3 text-xs" disabled={!ready} onClick={() => void decide("CONFIRM")}>Confirm suggestion</button>
+        <button type="button" className="btn btn-quiet min-h-8 px-3 text-xs" disabled={!ready} onClick={() => void decide("DISMISS")}>Dismiss suggestion</button>
+      </div>
+    </div>
   );
 }
 

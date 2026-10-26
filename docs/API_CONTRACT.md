@@ -102,6 +102,22 @@ Import `register_step` from `app.pipeline.orchestrator` (also available in `app.
 
 `app.features.register_system_extra("ai", callable)` adds an entry to `SystemOut.extras`. The callable returns JSON-compatible data and must omit secrets. Core migrations occupy `0002`–`0007`; AI migrations remain `0050`–`0099`.
 
+### AI layer and routing (migrations `0050_ai`, `0051_routing`)
+
+Contract: 61 operations, 71 schemas (`app/schemas_ai.py` holds the new shapes; `scripts/gen_contract.py` includes it). The AI layer registers through the hooks above and adds no other extension point.
+
+| Method | Path (under `/api/v1`) | Body → response | Access |
+|---|---|---|---|
+| GET | `/ai/status` | → `AiStatusOut` (`provider`, `models`, `mode`, `kill_switch`, `requests_today`, `budget`, `pages_today`, `last_error_code`, `last_error_at`, `fallback_active`, `cache_hits_today`; never a key) | ADMIN, AUDITOR |
+| POST | `/ai/kill-switch` | `KillSwitchRequest` (`engaged`, reason ≥ 10 characters) → `AiStatusOut` | ADMIN; audited as `ai.kill_switch` with a reason hash |
+| GET | `/applications/{application_id}/routing` | → `RoutingOut` (`outcome`, `reasons[]`, `automated_actions[]`, `run_id`, `computed_at`, `ai_used`, `policy_version`) | Existing application visibility (object-level check) |
+| GET | `/jobs/{job_id}/notes` | → `JobNoteOut[]` (INFO notes such as `AI step skipped: data_policy`) | Existing application visibility |
+| POST | `/documents/{document_id}/ai-suggestions/review` | `AiSuggestionReview` (`field`, `decision` ∈ `CONFIRM` \| `DISMISS`, reason ≥ 10 characters) → `OkOut` | OFFICER, ADMIN; 404 when nothing is open for that field; audited as `ai.suggestion_confirm` / `ai.suggestion_dismiss` with a reason hash |
+
+`RoutingOut.outcome` is exactly one of `READY_FOR_SCRUTINY`, `CORRECTIONS_REQUIRED`, `OFFICER_REVIEW_REQUIRED`. The recommendation is computed from the application's present state on every request; stored rows (`routing_recommendations`, one per computation) are the history and carry the automated actions that were taken. It never changes `ApplicationSummary.status`. Reason codes: `MISSING_DOCUMENT`, `DEFICIENCY_OPEN`, `REVIEW_FINDING_OPEN`, `RULE_NOT_EVALUABLE`, `RULE_NOT_EVALUATED`, `INTEGRITY_INDICATOR_OPEN`, `DUPLICATE_INDICATOR_OPEN`, `DOCUMENT_TYPE_MISMATCH`, `SIMULATED_SOURCE_ONLY`, `VERIFICATION_MISMATCH`, `VERIFICATION_EXPIRED`, `SOURCE_UNAVAILABLE`, `MANUAL_REVIEW_REQUIRED`, `VERIFICATION_PENDING`, `LOW_CONFIDENCE_CLAIM`, `AI_SUGGESTION_UNCONFIRMED`, `DOCUMENT_PROCESSING_FAILED`, `PROCESSING_INCOMPLETE`, and `NO_OPEN_ISSUES` (READY only).
+
+Existing shapes now populated when AI is on: `DocumentEvidence.ai_suggestions` (`field`, `value`, `page`, `reason` ∈ `not_found_on_page` | `conflicts_with_page` | `low_confidence`, `model`), `FindingOut.explanation_source` (`ai_checked` for a validated AI wording) and `FindingOut.ai_assisted`, `MetaOut.features.ai` / `.routing`, `SystemOut.extras.ai`, and claims with extractor `ai+text` / `ai+ocr`. Stage text `AI-assisted extraction` maps to `AI_EXTRACTION`, `Recommending next steps` to `ROUTING`. Notification kinds added: `CORRECTIONS_REQUIRED` (institution; one unread notice per application at a time); escalations reuse `OFFICER_NEEDED`.
+
 ### Finding example
 
 ```json

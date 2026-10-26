@@ -114,6 +114,15 @@ class Smoke(CoreApiCase):
             ids['user_id'] = next(u['id'] for u in actor.get(self.base+'/admin/users').json() if u['email']==email)
             body = {'reason':'Synthetic smoke account lifecycle check.'}
             if op == 'reactivateUser': self.check(actor.post(f"{self.base}/admin/users/{ids['user_id']}/deactivate",json=body),200,'fixture deactivate')
+        elif op == 'aiKillSwitch': body = {'engaged': False, 'reason': 'Synthetic smoke keeps the AI kill switch released.'}
+        elif op == 'reviewAiSuggestion':
+            # AI is off in smoke, so no suggestion exists; add one open fixture row to the temporary database.
+            with self.sql() as c:
+                doc = c.execute('SELECT id, application_id FROM documents WHERE id=?', (ids['document_id'],)).fetchone()
+                c.execute("INSERT INTO ai_suggestions (id,document_id,application_id,field,value,page,quote,reason,model,status,created_at)"
+                          " VALUES (?,?,?,'faculty_count','999999',1,NULL,'not_found_on_page','smoke-fixture','OPEN','2026-01-01')",
+                          ('sug_smoke_'+secrets.token_hex(8), doc[0], doc[1]))
+            body = {'field': 'faculty_count', 'decision': 'DISMISS', 'reason': 'Synthetic smoke dismisses a fixture suggestion.'}
         elif op == 'revokeSession': ids['session_id'] = actor.get(self.base+'/account/sessions').json()[0]['id']
         elif op == 'readNotification':
             uid = actor.get(self.base+'/auth/me').json()['id']

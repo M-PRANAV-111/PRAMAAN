@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { api, type ApplicationDetail, type JobOut } from "../../api/client";
-import { CHANNEL_LABEL, VERIFICATION_META } from "../../lib/format";
+import { CHANNEL_LABEL, SUGGESTION_REASON, VERIFICATION_META, label } from "../../lib/format";
 import { useQuery } from "../../lib/query";
 import { Pill, SimulatedTag } from "../ui";
 import { JourneySheet } from "./JourneySheet";
@@ -35,8 +35,8 @@ export function ProcessingJourney({
   const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const failed = prog.state === "FAILED";
   const stepName = STEPS[prog.step] ?? "Upload";
-  const history = (prog.job as JobOut & { stage_history?: string[] } | null)?.stage_history ?? [];
-  const notes = (prog.job as JobOut & { ai_notes?: string[] } | null)?.ai_notes ?? [];
+  const history = prog.job?.stage_history ?? [];
+  const notes = prog.job?.ai_notes ?? [];
 
   return (
     <section aria-label="Document verification journey" data-stage-code={prog.stageCode} className="sheet mb-6 grid gap-4 p-4 sm:p-5">
@@ -60,8 +60,8 @@ export function ProcessingJourney({
             <ol data-stage-history className="grid gap-1 text-xs">{history.map((code, i) => <li key={i} data-code={code}>{code.replaceAll("_", " ").toLowerCase()}</li>)}</ol>
           </details>}
           {notes.map(note => <p key={note} role="status" className="text-sm text-dusk">{note}</p>)}
-          {(ev.data?.ai_suggestions ?? []).map((suggestion, i) => <p key={i} className="text-sm text-turmeric">
-            AI suggestion — not found on the page, not used: {suggestion.field}: {suggestion.value}
+          {(ev.data?.ai_suggestions ?? []).map((suggestion, i) => <p key={i} data-ai-suggestion={suggestion.field} className="text-sm text-turmeric">
+            AI suggestion — {SUGGESTION_REASON[suggestion.reason]}, not used by any rule: {label(suggestion.field)}: {suggestion.value}
           </p>)}
 
           {!reduceMotion && (

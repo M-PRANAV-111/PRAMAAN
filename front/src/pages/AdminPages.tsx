@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
-import { api, ApiError, type RegistrationOut, type NotificationOut, type AdminUserOut } from "../api/client";
+import { api, ApiError, type AiStatusOut, type RegistrationOut, type NotificationOut, type AdminUserOut } from "../api/client";
 import { PageHeader } from "../components/AppShell";
 import { Empty, ErrorBox, Pill, Skeleton, useToast } from "../components/ui";
 import { callEndpoint, hasEndpoint } from "../lib/features";
@@ -133,8 +133,7 @@ export function AdminSystemPage() {
   const health = useQuery("sys:health", () => api("health"));
   const system = useQuery("sys:system", () => api("systemStatus"));
   const ready = useQuery("sys:ready", () => api("ready"));
-  const ai = useQuery(hasEndpoint("aiStatus") ? "sys:ai" : null,
-    () => callEndpoint<{ provider: string; model: string; mode: string; usage?: number; budget?: number; fallback_active?: boolean; last_error?: string | null }>("aiStatus"));
+  const ai = useQuery(hasEndpoint("aiStatus") ? "sys:ai" : null, () => callEndpoint<AiStatusOut>("aiStatus"));
 
   return (
     <>
@@ -162,14 +161,21 @@ export function AdminSystemPage() {
         <section className="sheet grid gap-3 p-5 text-sm">
           <h2 className="text-xl">AI & external adapters</h2>
           {ai.error ? <ErrorBox error={ai.error} retry={ai.refetch} /> : ai.data ? (
-            <dl className="grid grid-cols-[10rem_1fr] gap-y-2">
-              <dt className="text-ink-soft">Provider</dt><dd className="font-semibold">{ai.data.provider}</dd>
-              <dt className="text-ink-soft">Model</dt><dd>{ai.data.model}</dd>
-              <dt className="text-ink-soft">Data policy</dt><dd>{ai.data.mode}</dd>
-              <dt className="text-ink-soft">Usage today</dt><dd>{ai.data.usage ?? 0} / {ai.data.budget ?? "—"}</dd>
-              <dt className="text-ink-soft">Fallback active</dt><dd>{ai.data.fallback_active ? "Yes" : "No"}</dd>
-              {ai.data.last_error && <><dt className="text-ink-soft">Last error</dt><dd className="text-tape">{ai.data.last_error}</dd></>}
-            </dl>
+            <>
+              <dl data-ai-status className="grid grid-cols-[10rem_1fr] gap-y-2">
+                <dt className="text-ink-soft">Provider</dt>
+                <dd className="font-semibold">{ai.data.provider}{ai.data.simulated && <span className="ml-2 rounded-sm bg-dusk-wash px-1.5 py-0.5 text-xs font-semibold text-dusk">Simulated — recorded test answers</span>}</dd>
+                <dt className="text-ink-soft">Models</dt><dd>{Object.entries(ai.data.models).map(([k, v]) => `${k}: ${v}`).join(" · ")}</dd>
+                <dt className="text-ink-soft">Mode</dt><dd>{ai.data.mode}</dd>
+                <dt className="text-ink-soft">Kill switch</dt><dd>{ai.data.kill_switch ? "Engaged — AI off" : "Released"}</dd>
+                <dt className="text-ink-soft">Requests today</dt><dd>{ai.data.requests_today} / {ai.data.budget.requests}</dd>
+                <dt className="text-ink-soft">Pages today</dt><dd>{ai.data.pages_today} / {ai.data.budget.pages}</dd>
+                <dt className="text-ink-soft">Cache hits today</dt><dd>{ai.data.cache_hits_today}</dd>
+                <dt className="text-ink-soft">Fallback active</dt><dd>{ai.data.fallback_active ? "Yes" : "No"}</dd>
+                {ai.data.last_error_code && <><dt className="text-ink-soft">Last error</dt><dd className="text-turmeric">{ai.data.last_error_code}{ai.data.last_error_at ? ` · ${fmtDate(ai.data.last_error_at, true)}` : ""}</dd></>}
+              </dl>
+              {hasEndpoint("aiKillSwitch") && ai.data.provider !== "none" && <KillSwitchForm engaged={ai.data.kill_switch} />}
+            </>
           ) : (
             <p className="text-ink-soft">
               Deterministic pipeline active (<code>AI_PROVIDER=none</code>). Liveness: <strong>{health.data?.status ?? "checking"}</strong>.
@@ -178,6 +184,41 @@ export function AdminSystemPage() {
         </section>
       </div>
     </>
+  );
+}
+
+function KillSwitchForm({ engaged }: { engaged: boolean }) {
+  const toast = useToast();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setPending(true);
+    setError(null);
+    try {
+      await callEndpoint("aiKillSwitch", { body: { engaged: !engaged, reason: reason.trim() } });
+      invalidate("sys:ai");
+      setReason("");
+      toast(engaged ? "AI kill switch released" : "AI kill switch engaged");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not change the kill switch.");
+    } finally {
+      setPending(false);
+    }
+  }
+  return (
+    <form onSubmit={submit} className="grid gap-2 border-t border-rule pt-3">
+      <label className="field">
+        <span>Reason (recorded in the audit trail)</span>
+        <textarea className="input" value={reason} minLength={10} maxLength={2000} required
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setReason(e.target.value)} />
+      </label>
+      {error && <p role="alert" className="text-sm font-semibold text-ink">{error}</p>}
+      <button className="btn btn-quiet justify-self-start" disabled={pending || reason.trim().length < 10}>
+        {engaged ? "Release the AI kill switch" : "Engage the AI kill switch"}
+      </button>
+    </form>
   );
 }
 
