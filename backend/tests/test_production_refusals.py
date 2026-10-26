@@ -137,6 +137,15 @@ class RuntimeRefusals(LocalDatabaseCase):
         with patch.object(system, "get_settings", lambda: dev):
             self.assertTrue(system.meta(None)["features"]["demo_accounts"])  # control: the flag works outside production
 
+    def test_simulated_camera_is_not_offered(self):
+        """The scanner's drawn synthetic page is never offered in production; development and test keep it."""
+        from app.routes import system
+        prod = production()
+        with patch.object(system, "get_settings", lambda: prod):
+            self.assertFalse(system.meta(None)["features"]["simulated_camera"])
+        with patch.object(system, "get_settings", lambda: Settings(env="test")):
+            self.assertTrue(system.meta(None)["features"]["simulated_camera"])
+
 
 def _console_in_production() -> Settings:
     """Settings refuse console email in production; build the state a misconfigured process would be in."""

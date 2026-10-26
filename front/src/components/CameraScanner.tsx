@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useFeatures } from "../lib/features";
 import { Dialog, cx } from "./ui";
 
 /** Package one or more JPEG data-URLs into a standards-compliant %PDF-1.4 binary (parsed by pikepdf & pypdfium2). */
@@ -109,6 +110,10 @@ export function CameraScanner({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [camState, setCamState] = useState<"requesting" | "live" | "simulated">("requesting");
+  // The drawn synthetic page is a development/test stand-in; the server never offers it in production.
+  const { meta } = useFeatures();
+  const simulatedAllowed = !!meta?.features?.simulated_camera;
+  const blocked = camState === "simulated" && !simulatedAllowed;
   const [pages, setPages] = useState<{ dataUrl: string; width: number; height: number }[]>([]);
   const [crop, setCrop] = useState<"auto" | "full">("auto");
   const [rot, setRot] = useState(0);
@@ -153,7 +158,7 @@ export function CameraScanner({
       const ctx = c.getContext("2d")!;
       ctx.drawImage(v, Math.round(v.videoWidth * m), Math.round(v.videoHeight * m), sw, sh, 0, 0, sw, sh);
       setPages((p) => [...p, { dataUrl: c.toDataURL("image/jpeg", 0.9), width: sw, height: sh }]);
-    } else {
+    } else if (simulatedAllowed) {
       setPages((p) => [...p, drawSyntheticScan(docType, p.length + 1, crop, rot)]);
     }
   }
@@ -161,7 +166,7 @@ export function CameraScanner({
   function updateLastPage(nextCrop: "auto" | "full", nextRot: number) {
     setCrop(nextCrop);
     setRot(nextRot);
-    if (pages.length > 0 && camState !== "live") {
+    if (pages.length > 0 && camState !== "live" && simulatedAllowed) {
       setPages((p) => [...p.slice(0, -1), drawSyntheticScan(docType, p.length, nextCrop, nextRot)]);
     }
   }
@@ -184,11 +189,16 @@ export function CameraScanner({
   return (
     <Dialog open={open} onClose={onClose} title={`Scan document: ${label}`} wide>
       <div className="grid gap-4 text-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm bg-paper px-3 py-2 text-xs">
-          <span>
+        <div className={cx("flex flex-wrap items-center justify-between gap-2 rounded-sm px-3 py-2 text-xs",
+          camState === "simulated" && simulatedAllowed ? "bg-dusk-wash text-dusk" : "bg-paper")}>
+          <span data-camera-state={blocked ? "unavailable" : camState}>
             {camState === "live"
               ? "Live camera active — align the document inside the frame and capture."
-              : "Camera unavailable or headless environment — using calibrated synthetic document viewfinder (or upload a file below)."}
+              : blocked
+              ? "No camera is available on this device. Upload the file instead."
+              : camState === "simulated"
+              ? "Simulated camera (development and test only): captured pages are drawn SYNTHETIC samples, not a photo of your document."
+              : "Requesting camera access…"}
           </span>
           <span className="font-semibold">Pages captured: {pages.length}</span>
         </div>
@@ -210,6 +220,7 @@ export function CameraScanner({
           </div>
 
           <div className="grid content-start gap-2.5">
+            {!blocked && <>
             <button type="button" className="btn btn-primary" onClick={capturePage}>
               {pages.length === 0 ? "Capture page" : "Add another page"}
             </button>
@@ -235,6 +246,7 @@ export function CameraScanner({
                 </button>
               </>
             )}
+            </>}
 
             <div className="border-t border-rule pt-2.5 text-xs text-ink-soft">
               <label className="link cursor-pointer font-semibold text-ink">
