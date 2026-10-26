@@ -87,7 +87,9 @@ export function Queue() {
       if (sort === "submitted") return mul * (y.submitted_at ?? "").localeCompare(x.submitted_at ?? "");
       return mul * (ORDER.indexOf(x.status) - ORDER.indexOf(y.status) || y.counts.active - x.counts.active);
     });
-  const counts = Object.fromEntries(ORDER.map((s) => [s, (apps.data ?? []).filter((a) => a.status === s).length]));
+  // The list is one server-filtered page, so status totals come from the dashboard (same visibility scope).
+  const counts = Object.fromEntries(ORDER.map((s) => [s, dash.data?.by_status[s] ?? 0]));
+  const allCount = dash.data?.applications;
   return (
     <>
       <PageHeader title="Scrutiny queue" lead="Applications submitted to AICTE, with deficiencies first. Statuses are derived from findings; none of them is a decision." />
@@ -99,7 +101,7 @@ export function Queue() {
             <button key={s} onClick={() => updateParams({ status: s })} aria-pressed={filter === s}
               className={cx("rounded-full px-3 py-1.5 text-sm font-semibold transition-colors",
                 filter === s ? "bg-ink text-paper" : "bg-sheet text-ink-soft shadow-[inset_0_0_0_1px_var(--color-rule-strong)] hover:text-ink")}>
-              {s === "ALL" ? `All` : `${STATUS_META[s].label} (${counts[s]})`}
+              {s === "ALL" ? (allCount === undefined ? "All" : `All (${allCount})`) : `${STATUS_META[s].label} (${counts[s]})`}
             </button>
           ))}
         </div>

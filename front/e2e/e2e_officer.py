@@ -1,4 +1,5 @@
 """J3: search, clarification round trip, officer decision and audit verification."""
+import re
 from playwright.sync_api import sync_playwright, expect
 from core_support import *
 
@@ -30,7 +31,7 @@ with sync_playwright() as p:
     officer.get_by_role('button', name='Intake is the same in the affidavit').click()
     expect(officer.get_by_text(reply, exact=True)).to_be_visible()
     check('Officer sees the real institutional reply', True)
-    officer.get_by_role('radio', name='Confirm', exact=True).check()
+    officer.get_by_role('radio', name=re.compile(r'^Confirm\b')).check()  # label text = option + its hint
     officer.get_by_label('Reason (recorded with your name)').fill('Institution response explains the mismatch; the finding stands for scrutiny.')
     officer.get_by_role('button', name='Record decision').click()
     expect(officer.get_by_text('Decision recorded in the audit trail')).to_be_visible()

@@ -92,8 +92,17 @@ with sync_playwright() as p:
     sec_nav = pg.get_by_role("navigation", name="Applicant portal sections")
     check("Applicant Dashboard renders 10 portal sections", sec_nav.locator("button").count() == 10)
     sec_nav.get_by_role("button", name="Upload / Scan").click()
-    pg.wait_for_timeout(500)
-    check("Applicant Dashboard switches to Upload / Scan section", pg.get_by_role("button", name="Scan document").first.is_visible())
+    # The seeded live-demo institution has no application yet, so the section must say so and offer to create one.
+    empty_state = pg.get_by_text("Start an application first", exact=True)
+    empty_state.wait_for(timeout=10000)
+    check("Upload / Scan section asks for an application first when none exists", empty_state.is_visible())
+    pg.get_by_role("main").get_by_role("button", name="Create application").first.click()
+    pg.get_by_role("button", name="Create application", exact=True).click()  # the real create form
+    pg.wait_for_url("**/applications/**")
+    pg.goto(base + "/institution?section=upload")
+    scan = pg.get_by_role("button", name="Scan document").first
+    scan.wait_for(timeout=10000)
+    check("Applicant Dashboard switches to Upload / Scan section", scan.is_visible())
 
     # Logout and sign back in with the newly registered credentials
     pg.get_by_role("button", name="Sign out").click()

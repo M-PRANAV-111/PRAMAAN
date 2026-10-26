@@ -33,14 +33,28 @@ ROLE_ROUTES = [
     ("auditor", "auditor@aicte.synthetic.in", ["/audit", "/rules", "/benchmark", "/help"]),
 ]
 
+def expected_no_benchmark(message):
+    """A fresh seed has no benchmark report: GET /api/v1/benchmark answers its documented 404 (no_benchmark),
+    which Chromium logs as a failed resource. Only that exact request is excused."""
+    return (not has_benchmark and "404" in message.text
+            and (message.location or {}).get("url", "").split("?")[0].endswith("/api/v1/benchmark"))
+
+
+has_benchmark = False
+
 with sync_playwright() as p:
+    probe = p.request.new_context(base_url=base, extra_http_headers={"X-Requested-With": "pramaan"})
+    assert probe.post("/api/v1/auth/login", data={"email": "officer@aicte.synthetic.in", "password": pw}).ok
+    has_benchmark = probe.get("/api/v1/benchmark").ok
+    probe.dispose()
     b = p.chromium.launch()
     for vp_name, vp in [("desktop", {"width": 1440, "height": 900}), ("phone", {"width": 390, "height": 844})]:
         for role_name, email, routes in ROLE_ROUTES:
             ctx = b.new_context(viewport=vp, device_scale_factor=2 if vp_name == "phone" else 1)
             pg = ctx.new_page()
             pg.on("pageerror", lambda e, r=role_name, v=vp_name: errors.append(f"{v}/{r}: pageerror: {e}"))
-            pg.on("console", lambda m, r=role_name, v=vp_name: m.type == "error" and "401" not in m.text and errors.append(f"{v}/{r}: console: {m.text}"))
+            pg.on("console", lambda m, r=role_name, v=vp_name: m.type == "error" and "401" not in m.text
+                  and not expected_no_benchmark(m) and errors.append(f"{v}/{r}: console: {m.text}"))
 
             if email:
                 login(pg, email)
@@ -54,6 +68,9 @@ with sync_playwright() as p:
                 pg.screenshot(path=out / f"inv-{vp_name}-{role_name}-{slug}.png")
                 check(f"{vp_name} {role_name} {route}: no horizontal overflow", no_overflow)
                 check(f"{vp_name} {role_name} {route}: has h1 heading", has_h1)
+                if route == "/benchmark" and not has_benchmark:
+                    check(f"{vp_name} {role_name} /benchmark: fresh seed explains that no benchmark has run",
+                          pg.get_by_text("No benchmark has been run yet", exact=True).is_visible())
 
             if role_name in ("institution", "officer"):
                 # Also visit the first application workspace and its tabs

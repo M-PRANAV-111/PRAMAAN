@@ -14,7 +14,13 @@ with sync_playwright() as p:
             break
     check('email reachable by keyboard', page.get_by_label('Email', exact=True).evaluate('(el) => el === document.activeElement'))
     page.keyboard.type('officer@aicte.synthetic.in')
-    page.keyboard.press('Tab')
+    # The "Show password" toggle sits between the two fields in tab order.
+    password_field = page.get_by_label('Password', exact=True)
+    for _ in range(5):
+        page.keyboard.press('Tab')
+        if password_field.evaluate('(el) => el === document.activeElement'):
+            break
+    check('password reachable by keyboard', password_field.evaluate('(el) => el === document.activeElement'))
     page.keyboard.type(password)
     page.keyboard.press('Enter')
     expect(page.get_by_role('heading', name='Scrutiny queue')).to_be_visible()
