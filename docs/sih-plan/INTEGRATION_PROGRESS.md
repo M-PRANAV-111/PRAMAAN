@@ -1,5 +1,5 @@
-Last action: 2026-10-27 — merged Part B (`8a8da49`) with AI_TEST_FAULT and the fixture provider ported; added production-refusal, restart and readiness tests (`e763027`); checkpoint green: backend 204 OK, smoke 393/0, browser 19/19.
-Next action: claimed A1/A2 browser coverage — extend e2e_password (Account page: change password, sessions, revoke, refresh), e2e_admin (decline, System page), e2e_officer (mark all read, Run full check); then TEST_PLAN.md, DEMO_GUIDE.md, CameraScanner decision, final report.
+Last action: 2026-10-27 — A1/A2 browser coverage added (e2e_admin 7/7, e2e_password 7/7, e2e_officer 5/5); operation matrix now 55 verified of 61.
+Next action: CameraScanner decision (dev-only row), then TEST_PLAN.md and DEMO_GUIDE.md, a final full re-run of every check, then the final report and pull request.
 Known problems: `07_INTEGRATION.md` not found (Questions 1); Docker not installed (A7); CI results cannot be read here (`gh` missing, repository private) so A8's CI step is unobserved; `updateAccount` and `documentHistory` have no UI (decision needed).
 
 # Integration resume status
@@ -47,8 +47,8 @@ Claims (to avoid double work):
 
 | Item | Owner | State | Evidence | Next step |
 |---|---|---|---|---|
-| A1 accounts | Astra (claimed by Opus for browser coverage) | Partial | `tests.test_accounts` (8) inside `Ran 204 tests … OK (skipped=3)`; smoke rows for all account operations as expected; browser e2e_register `3/3`, e2e_password `2/2`. Not reached by a browser run: Account page (change password, sessions, revoke, refresh), Decline in admin | Extend e2e_password and e2e_admin (claimed) |
-| A2 notifications | Astra (claimed by Opus for browser coverage) | Partial | `tests.test_notifications` passes; e2e_officer opens the clarification notice. `readAllNotifications` not reached | Add "Mark all as read" to e2e_officer (claimed) |
+| A1 accounts | Astra (browser coverage by Opus) | Verified | `tests.test_accounts` (8) inside `Ran 204 tests … OK (skipped=3)`; smoke rows for all account operations; browser e2e_register `3/3`; e2e_password `7/7` (`PASS Refresh this session renews the real session`, `PASS Revoke ends exactly one other session`, `PASS Revoke other sessions keeps only this one`, `PASS Changing the password keeps the current session`, `PASS The changed password signs in`); e2e_admin `7/7` (`PASS Declined applicant cannot sign in`) | — (`updateAccount`, `getAccount`: Question 2) |
+| A2 notifications | Astra (browser coverage by Opus) | Verified | `tests.test_notifications` passes; e2e_officer `5/5`: opens the clarification notice and `PASS Mark all as read leaves no unread notification` | — |
 | A3 timeline and reports | Astra | Verified | `tests.test_tracking`, `tests.test_reports` pass; e2e_application `24/24` incl. `PASS real PDF downloaded`, `PASS download audited in timeline`, `PASS complete real-event timeline` | — |
 | A4 clarification loop | Astra | Verified | `tests.test_notifications`, `tests.test_tracking` pass; e2e_officer `3/3` (`PASS Officer sees the real institutional reply`, `PASS Audit chain verifies after the complete clarification loop`) | — |
 | A5 search and lists | Astra | Verified | `tests.test_tracking` (search, pagination) passes; e2e_officer `PASS Queue search uses backend query and total header`; tracking_check `16 of 16` after the Queue count fix (`ea36c6c`) | — |
@@ -64,9 +64,9 @@ Claims (to avoid double work):
 | B7 data policy | Opus | Verified | `test_ai_policy` (14) in the 204 run; e2e_ai `PASS an unstamped file causes no provider request` (all variants), `PASS the data policy is recorded as a skip note` (fixture, rate_limit) | — |
 | C e2e_register | Astra | Verified | `PASS e2e_register.py`, `3/3 checks passed` | — |
 | C e2e_application | Astra | Verified | `PASS e2e_application.py`, `24/24 checks passed` | — |
-| C e2e_officer | Astra | Verified | `PASS e2e_officer.py`, `3/3 checks passed` (selector fixed in `ea36c6c`) | Extend for A2 (claimed) |
-| C e2e_admin | Astra | Verified | `PASS e2e_admin.py`, `5/5 checks passed` | Extend for A1 decline (claimed) |
-| C e2e_password | Astra | Verified | `PASS e2e_password.py`, `2/2 checks passed` | Extend for the Account page (claimed) |
+| C e2e_officer | Astra | Verified | `PASS e2e_officer.py`, `5/5 checks passed` (selector fixed; extended with mark-all-read and `PASS Run full check completes a real validation job`) | — |
+| C e2e_admin | Astra | Verified | `PASS e2e_admin.py`, `7/7 checks passed` (extended with decline and the System page) | — |
+| C e2e_password | Astra | Verified | `PASS e2e_password.py`, `7/7 checks passed` (extended with the Account page) | — |
 | C e2e_ai | Opus | Verified | rewritten in `8a8da49`: fixture `25/25`, rate_limit `19/19`, none `16/16` | — |
 | C e2e_security | Opus | Verified | `PASS e2e_security.py`, `9/9 checks passed` | — |
 | C e2e_quality | Opus | Verified | `PASS e2e_quality.py`, `11/11 checks passed` (tab order fixed in `ea36c6c`) | — |
@@ -83,12 +83,9 @@ One row per contract operation (61); evidence columns are in
 
 | Item | Owner | State | Evidence | Next step |
 |---|---|---|---|---|
-| 48 operations (list in the matrix) | as tagged | Verified | smoke as expected for every caller + a 2xx in a browser run today | — |
+| 55 operations (list in the matrix) | as tagged | Verified | smoke as expected for every caller + a 2xx in a browser run today | — |
 | `metrics` | Astra | Verified | smoke `401/200(token)`; token-only by design | — |
-| `getAccount`, `revokeSession`, `revokeOtherSessions`, `changePassword`, `refresh` | Astra | Partial | smoke as expected; Account page calls them; no browser run reaches it | A1 (claimed) |
-| `declineRegistration` | Astra | Partial | smoke `200` for ADMIN; no browser run declines | A1 (claimed) |
-| `readAllNotifications` | Astra | Partial | smoke 200; not reached | A2 (claimed) |
-| `validateApplication` | Astra | Partial | smoke 202/202/202/403; "Run full check" not reached | claimed |
+| `getAccount` | Astra | Partial | smoke 200; the UI only uses its presence as a navigation gate and reads the profile from `me` | Question 2 |
 | `benchmark` | Astra | Partial | browser runs got the documented 404 on a fresh seed (page explains it, asserted by inventory_check); smoke generated a report and got 200 | Accept as designed |
 | `jobNotes` | Opus | Partial | smoke 200/404; the UI reads the same notes from `JobOut.ai_notes`, so no screen calls this endpoint | Keep API-only |
 | `updateAccount`, `documentHistory` | Astra | Partial | smoke 200; no UI | Question 2 |

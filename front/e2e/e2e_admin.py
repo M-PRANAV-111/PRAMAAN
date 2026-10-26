@@ -45,5 +45,37 @@ with sync_playwright() as p:
     second.locator('li').filter(has_text=note).get_by_role('button', name='Activate', exact=True).click()
     expect(second.locator('li').filter(has_text=note).get_by_text('Active', exact=True)).to_be_visible()
     check('Second administrator activates the real proposal', True)
+
+    # A1: a real registration, verified by its emailed link, then declined with a recorded reason.
+    applicant = browser.new_page()
+    applicant_email = 'declined.' + uuid4().hex[:8] + '@institution.synthetic.in'
+    institution = 'Declined Integration Institute ' + uuid4().hex[:8]
+    applicant.goto(base + '/register')
+    for label, value in [('Nodal officer name', 'Declined Nodal Officer'), ('Official email', applicant_email),
+                         ('Password', password), ('Confirm password', password), ('Institution name', institution),
+                         ('AICTE Permanent ID', '1-DEC-' + uuid4().hex[:6]), ('State', 'Telangana'),
+                         ('Trust or society name', 'Declined Synthetic Trust')]:
+        applicant.get_by_label(label, exact=True).fill(value)
+    applicant.get_by_role('checkbox').check()
+    applicant.get_by_role('button', name='Register institution').click()
+    expect(applicant.get_by_role('heading', name='Registration received')).to_be_visible()
+    applicant.goto(mail_link(applicant_email, '/verify-email'))
+    applicant.get_by_role('button', name='Confirm email address').click()
+    expect(applicant.get_by_text('Your email is verified.')).to_be_visible()
+    admin.goto(base + '/admin/registrations')
+    entry = admin.locator('li').filter(has_text=institution)
+    entry.get_by_label('Reason', exact=False).fill('Permanent ID does not match the AICTE record for this institution.')
+    entry.get_by_role('button', name='Decline', exact=True).click()
+    expect(admin.get_by_text('Registration declined', exact=True)).to_be_visible()
+    expect(entry.get_by_text('DECLINED', exact=True)).to_be_visible()
+    declined = applicant.request.post(base + '/api/v1/auth/login', data={'email': applicant_email, 'password': password},
+                                      headers={'X-Requested-With': 'pramaan'})
+    check('Declined applicant cannot sign in', declined.status == 401)
+
+    # The System page shows readiness and the worker from the real probes.
+    admin.goto(base + '/admin/system')
+    expect(admin.get_by_text('Worker:', exact=False)).to_be_visible()
+    expect(admin.locator('section').filter(has_text='Readiness & subsystems').get_by_text('ok', exact=True).first).to_be_visible()
+    check('System page reflects the readiness probe', admin.request.get(base + '/api/v1/ready').status == 200)
     finish(second, 'e2e-admin')
     browser.close()
