@@ -1,0 +1,48 @@
+# Netlify serves the built frontend and proxies /api/* to the Render backend, so the browser sees one
+# address and the SameSite=Strict session cookie works. Deployment record: docs/sih-plan/DEPLOYED.md.
+
+[build]
+  command = "cd front && npm install --no-audit --no-fund && npm run build"
+  publish = "front/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Must stay above the /* rule.
+[[redirects]]
+  from = "/api/*"
+  to = "https://pramaan-api-qdbt.onrender.com/api/:splat"
+  status = 200
+
+# The backend serves these three files from dist/assets at the site root (app/main.py, _spa_routes);
+# without these rules they would fall through to index.html.
+[[redirects]]
+  from = "/sw.js"
+  to = "/assets/sw.js"
+  status = 200
+
+[[redirects]]
+  from = "/manifest.webmanifest"
+  to = "/assets/manifest.webmanifest"
+  status = 200
+
+[[redirects]]
+  from = "/apple-touch-icon.png"
+  to = "/assets/apple-touch-icon.png"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# The same security headers the backend sets on every page it serves (app/main.py, SecurityHeaders).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "no-referrer"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Content-Security-Policy = "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
