@@ -98,6 +98,7 @@ All on 27 October 2026. Head `35f8a19`; the e2e_security re-run is on `df824ab`,
 | Frontend build | `cd front; npm run build` | PASS — 359.3 KB signed-in JS, 43.5 KB start-page chunk, 49.5 KB CSS |
 | Browser suite, fresh seed per script | `cd backend; python -m scripts.e2e` | 18/19 — e2e_security raced its own sign-out (setup requests correctly refused with 403); script fixed |
 | e2e_security after the fix | `python -m scripts.e2e e2e_security.py` ×3 | PASS — `3/3 browser scripts passed`, 15 checks each |
+| Browser suite on the final head `5f781dd` | `cd backend; python -m scripts.e2e` | PASS — `19/19 browser scripts passed` (11 min 15 s) |
 | Benchmark | `python -m eval.benchmark` | 26 of 26 planted faults; 2 of 8 look-alikes flagged (incremental-save indicator) — unchanged |
 | Demo start | seed, benchmark, server with `SHOW_DEMO_ACCOUNTS=true` | `/api/v1/ready` 200; `/meta`: demo_accounts true, simulated_camera true, routing true, ai false |
 | Docker image | `docker build -t pramaan .` | Not run — Docker not installed |

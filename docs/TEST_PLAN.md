@@ -211,6 +211,7 @@ One fresh seeded server per browser script (`python -m scripts.e2e`: generated `
 | Browser suite | `backend$ python -m scripts.e2e` | **18/19** on the final run; e2e_security raced its own sign-out (setup requests refused with 403, as designed). Fixed in the script; then **3/3** consecutive passes |
 | Per browser script (final run) | — | journey_check 48/48 · signin_check 28 · walkthrough pass · accounts_check 22/22 · tracking_check 16/16 · processing_check 13/13 · inventory_check 99/99 · a11y_check 10/10 · measure_page pass · e2e_admin 7/7 · e2e_ai fixture 25/25, rate_limit 19/19, none 16/16 · e2e_application 24/24 · e2e_officer 5/5 · e2e_password 7/7 · e2e_quality 11/11 · e2e_register 3/3 · e2e_security 15/15 (after the fix) |
 | Benchmark | `backend$ python -m eval.benchmark` (temporary `DATA_DIR`) | **26 of 26 planted faults; 2 of 8 valid look-alikes flagged** (`INTEGRITY:INCREMENTAL_UPDATE`) — unchanged |
+| Browser suite on the final head `5f781dd` | `backend$ python -m scripts.e2e` | **PASS — 19/19 browser scripts passed** (11 min 15 s) |
 | Docker image | `docker build -t pramaan .` | **Not run — Docker is not installed on this machine** |
 | CI run for the branch | GitHub Actions | **Not observed** — `gh` not installed and the repository is private |
 

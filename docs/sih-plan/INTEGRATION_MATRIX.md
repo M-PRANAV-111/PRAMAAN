@@ -101,6 +101,7 @@ changed between them).
 | Frontend build | `cd front; npm run build` | **PASS** — `signed-in JS 359.3 KB, start-page chunk 43.5 KB, css 49.5 KB` |
 | Browser suite on fresh seeds | `cd backend; python -m scripts.e2e` | **18/19** — every script passed except e2e_security (`waiting for get_by_text("Too many attempts. Wait a minute.")`): its setup requests raced the sign-out and were correctly refused with 403. Script fixed in `df824ab` |
 | e2e_security after the fix | `python -m scripts.e2e e2e_security.py e2e_security.py e2e_security.py` | **PASS** — `3/3 browser scripts passed`, each 15 PASS, 0 FAIL |
+| Browser suite on the final head `5f781dd` | `cd backend; python -m scripts.e2e` | **PASS — `19/19 browser scripts passed`** (11 min 15 s, fresh seed per script) |
 | Docker image | `docker build -t pramaan .` | **Not run** — Docker not installed |
 
 Per script on the final run: journey_check 48 of 48 · signin_check 28 PASS · walkthrough exit 0 · accounts_check 22 of 22 ·

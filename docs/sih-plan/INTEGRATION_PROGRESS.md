@@ -1,4 +1,4 @@
-Last action: 2026-10-27 — final checks recorded (backend 228 OK, smoke 393/0, browser 18/19 then e2e_security fixed and 3/3); every row is Verified or Blocked; final report written; branch pushed.
+Last action: 2026-10-27 — final head `5f781dd`: browser suite 19/19, backend 228 OK, smoke 393/0, contract 61/71; every row is Verified or Blocked; final report written; branch pushed.
 Next action: a person with Docker builds the image (A7); a person with GitHub access opens the pull request from INTEGRATION_REPORT.md and reads the CI run (A8); answer Questions 1–2.
 Known problems: Docker not installed here; CI and the pull request need GitHub access (`gh` missing, private repo); no AI provider key, so no live AI call has ever been made; `07_INTEGRATION.md` not found.
 
