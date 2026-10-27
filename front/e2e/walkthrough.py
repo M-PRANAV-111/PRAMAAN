@@ -65,7 +65,7 @@ with sync_playwright() as p:
     page.wait_for_timeout(500)
     page.screenshot(path=out / "08-rules.png", full_page=False)
     page.goto(base + "/benchmark")
-    page.wait_for_timeout(600)
+    expect(page.get_by_text("planted faults detected", exact=True)).to_be_visible(timeout=15000)  # the real report
     page.screenshot(path=out / "09-benchmark.png", full_page=True)
     page.get_by_role("button", name="Sign out").click()
 

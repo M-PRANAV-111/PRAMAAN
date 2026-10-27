@@ -87,12 +87,31 @@ in [INTEGRATION_PROGRESS.md](INTEGRATION_PROGRESS.md) on this date.
 Not covered here: Postgres, Redis and MinIO outages from `docs/agent-prompts/INTEGRATION.md` do not apply (this
 build uses SQLite and local storage); a compose-stack outage test needs Docker, which is not installed.
 
-## Operation matrix — latest run
+## Final checks — 2026-10-27
 
-Generated 2026-10-27 after the Part B merge (`8a8da49`) from `contracts/openapi.json`, the frontend call sites, the
-smoke output (`61 operations; 393 assertions passed; 0 failed operations.`) and the server logs of the 19 browser runs
-that passed (`19/19 browser scripts passed`), with e2e_admin, e2e_password and e2e_officer replaced by their extended
-re-runs (7/7, 7/7, 5/5) from the same day.
+Head `35f8a19` for every row except the e2e_security re-run, which is `df824ab` (only `front/e2e/e2e_security.py`
+changed between them).
+
+| Check | Command | Result |
+|---|---|---|
+| Contract drift | `cd backend; python -m scripts.gen_contract --check` | **PASS** — `61 operations, 71 schemas verified` |
+| Backend unit and API tests | `cd backend; python -m unittest discover -s tests -t .` | **PASS** — `Ran 228 tests in 214.125s` / `OK (skipped=3)`; the 3 skips are the opt-in live-provider tests (no key) |
+| Contract smoke matrix | `cd backend; python -m scripts.smoke` | **PASS** — `61 operations; 393 assertions passed; 0 failed operations.` |
+| Frontend typecheck | `cd front; npm run typecheck` | **PASS** — exit 0 |
+| Frontend build | `cd front; npm run build` | **PASS** — `signed-in JS 359.3 KB, start-page chunk 43.5 KB, css 49.5 KB` |
+| Browser suite on fresh seeds | `cd backend; python -m scripts.e2e` | **18/19** — every script passed except e2e_security (`waiting for get_by_text("Too many attempts. Wait a minute.")`): its setup requests raced the sign-out and were correctly refused with 403. Script fixed in `df824ab` |
+| e2e_security after the fix | `python -m scripts.e2e e2e_security.py e2e_security.py e2e_security.py` | **PASS** — `3/3 browser scripts passed`, each 15 PASS, 0 FAIL |
+| Docker image | `docker build -t pramaan .` | **Not run** — Docker not installed |
+
+Per script on the final run: journey_check 48 of 48 · signin_check 28 PASS · walkthrough exit 0 · accounts_check 22 of 22 ·
+tracking_check 16 of 16 · processing_check 13 of 13 · inventory_check 99 of 99 · a11y_check 10 of 10 · measure_page
+exit 0 · e2e_admin 7/7 · e2e_ai fixture 25/25, rate_limit 19/19, none 16/16 · e2e_application 24/24 · e2e_officer 5/5 ·
+e2e_password 7/7 · e2e_quality 11/11 · e2e_register 3/3 · e2e_security 15 PASS (after the fix).
+
+## Operation matrix — final run
+
+Generated 2026-10-27 from `contracts/openapi.json`, the frontend call sites, the final smoke output and the server logs
+of the final browser runs (with the passing e2e_security re-run in place of the raced one).
 
 How it is built: every operation in the contract; the frontend files that name it; the smoke result per caller (`OUT`
 = signed out, then each role, then the invalid-input and foreign-owner probes); and the requests the server logged
@@ -127,7 +146,7 @@ counts were Verified 42, Partial (UI not exercised) 13, Partial (no UI) 2, API o
 | `verifyAudit` | `GET /api/v1/audit/verify` | pages/Oversight.tsx | 401 / 403 / 200 / 200 / 200 / n/a / n/a | 200: e2e_officer, walkthrough | Verified |
 | `acceptInvitation` | `POST /api/v1/auth/accept-invitation` | pages/AuthPages.tsx | 200 / 200 / 200 / 200 / 200 / 422 / n/a | 200: e2e_admin | Verified |
 | `changePassword` | `POST /api/v1/auth/password/change` | components/AppShell.tsx, pages/AuthPages.tsx | 401 / 200 / 200 / 200 / 200 / 422 / n/a | 200: e2e_password | Verified |
-| `forgotPassword` | `POST /api/v1/auth/password/forgot` | lib/features.ts, pages/AuthPages.tsx | 202 / 202 / 202 / 202 / 202 / 422 / n/a | 202: e2e_password, e2e_security; 403: e2e_security; 429: e2e_security | Verified |
+| `forgotPassword` | `POST /api/v1/auth/password/forgot` | lib/features.ts, pages/AuthPages.tsx | 202 / 202 / 202 / 202 / 202 / 422 / n/a | 202: e2e_password, e2e_security; 429: e2e_security | Verified |
 | `login` | `POST /api/v1/auth/login` | api/client.ts, lib/session.tsx | 200 / 200 / 200 / 200 / 200 / 422 / n/a | 200: a11y_check, accounts_check, e2e_admin, e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_application, e2e_officer, e2e_password, e2e_quality, e2e_register, e2e_security, inventory_check, processing_check, signin_check, tracking_check, walkthrough; 401: e2e_admin, signin_check | Verified |
 | `logout` | `POST /api/v1/auth/logout` | lib/session.tsx | 401 / 200 / 200 / 200 / 200 / n/a / n/a | 200: a11y_check, accounts_check, e2e_security, signin_check, tracking_check, walkthrough | Verified |
 | `me` | `GET /api/v1/auth/me` | api/client.ts, lib/session.tsx | 401 / 200 / 200 / 200 / 200 / n/a / n/a | 200: a11y_check, accounts_check, e2e_admin, e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_officer, e2e_password, e2e_quality, e2e_register, e2e_security, inventory_check, signin_check, walkthrough; 401: a11y_check, accounts_check, e2e_admin, e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_application, e2e_officer, e2e_password, e2e_quality, e2e_register, e2e_security, inventory_check, journey_check, measure_page, processing_check, signin_check, tracking_check, walkthrough | Verified |

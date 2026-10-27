@@ -32,7 +32,7 @@ export function deriveFeatures(meta?: MetaOut | null): FeatureFlags {
     clarifications: !!f.clarifications && hasEndpoint("respondToFinding"),
     ai: !!f.ai && hasEndpoint("aiStatus"),
     routing: !!f.routing && hasEndpoint("applicationRouting"),
-    account: hasEndpoint("getAccount") || hasEndpoint("account"),
+    account: hasEndpoint("getAccount"),
     admin: hasEndpoint("listRegistrations") || hasEndpoint("listUsers") || hasEndpoint("systemStatus"),
   };
 }

@@ -38,6 +38,14 @@ def run(name, ai_variant=None):
         (data/'seed-error.txt').write_bytes(seed.stderr)
         return False
     env.pop('SEED_DEMO_PASSWORD')
+    if name == 'walkthrough.py':
+        # A real (one-repeat) benchmark report so the walkthrough sees the report page, not the fresh-seed empty state.
+        bench = subprocess.run([sys.executable, '-m', 'eval.benchmark', '--repeats', '1', '--out',
+                                str(data/'benchmark'/'latest.json')], cwd=BACKEND, env=env, capture_output=True, timeout=600)
+        if bench.returncode:
+            print('FAIL', name, 'benchmark generation failed')
+            (data/'benchmark-error.txt').write_bytes(bench.stderr)
+            return False
     if ai_variant:
         env['AI_PROVIDER'] = 'none' if ai_variant == 'none' else 'fixture'
         env['AI_TEST_FAULT'] = 'rate_limit' if ai_variant == 'rate_limit' else ''

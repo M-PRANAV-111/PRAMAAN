@@ -193,3 +193,32 @@ The two off-diagonal bundles are `overlay_edit_faculty`: the planted edit lowers
 Per field (oracle): `affidavit.total_intake` 0.56 → 0.89, `fire_noc.valid_to` 0.44 → 0.67, `affidavit.academic_year` 0.78 → 0.89, `affidavit.faculty_count` 0.72 → 0.83, `permanent_id` 0.56 → 0.67 (both types). What the oracle cannot fix is by design: values the OCR garbles (low-resolution, sideways, handwriting) cannot be grounded and stay suggestions, and files whose stamp cannot be read are never sent.
 
 **What this does not show.** Real-model accuracy, latency, token use and cost (no key); behaviour on real documents; whether Gemini accepts every request field. Run the evaluation with a key under `AI_DATA_POLICY=synthetic_only` to measure those.
+
+## Integration (`integration/e2e`) — local verification, 27 October 2026
+
+Environment: Windows 11, Python 3.13.14, Node 22.19.0, Chromium 1248 (Playwright), Tesseract installed, no Docker.
+One fresh seeded server per browser script (`python -m scripts.e2e`: generated `SEED_DEMO_PASSWORD`,
+`EMAIL_PROVIDER=console`, `APP_ENV=test`). Details, the operation matrix and the failure and retry table:
+[sih-plan/INTEGRATION_MATRIX.md](sih-plan/INTEGRATION_MATRIX.md).
+
+| Check | Command | Actual result |
+|---|---|---|
+| Contract drift | `backend$ python -m scripts.gen_contract --check` | **PASS — 61 operations, 71 schemas verified** |
+| Backend unit and API tests | `backend$ python -m unittest discover -s tests -t .` | **PASS — 228 tests in 214.1 s, OK (3 skipped: opt-in live-provider tests, no key)** |
+| Contract smoke matrix (every operation × every role, invalid input, foreign owner) | `backend$ python -m scripts.smoke` | **PASS — 61 operations; 393 assertions passed; 0 failed operations** |
+| Frontend typecheck | `front$ npm run typecheck` | **PASS** |
+| Frontend build | `front$ npm run build` | **PASS — 359.3 KB signed-in JS, 43.5 KB start-page chunk, 49.5 KB CSS** |
+| Browser suite | `backend$ python -m scripts.e2e` | **18/19** on the final run; e2e_security raced its own sign-out (setup requests refused with 403, as designed). Fixed in the script; then **3/3** consecutive passes |
+| Per browser script (final run) | — | journey_check 48/48 · signin_check 28 · walkthrough pass · accounts_check 22/22 · tracking_check 16/16 · processing_check 13/13 · inventory_check 99/99 · a11y_check 10/10 · measure_page pass · e2e_admin 7/7 · e2e_ai fixture 25/25, rate_limit 19/19, none 16/16 · e2e_application 24/24 · e2e_officer 5/5 · e2e_password 7/7 · e2e_quality 11/11 · e2e_register 3/3 · e2e_security 15/15 (after the fix) |
+| Benchmark | `backend$ python -m eval.benchmark` (temporary `DATA_DIR`) | **26 of 26 planted faults; 2 of 8 valid look-alikes flagged** (`INTEGRITY:INCREMENTAL_UPDATE`) — unchanged |
+| Docker image | `docker build -t pramaan .` | **Not run — Docker is not installed on this machine** |
+| CI run for the branch | GitHub Actions | **Not observed** — `gh` not installed and the repository is private |
+
+New tests in this integration: `test_production_refusals` (19, one per production refusal), `test_ai_test_hooks` (10,
+`AI_TEST_FAULT` and the recorded fixture provider, both refused outside `APP_ENV=test`), `test_job_restart` (a job left
+RUNNING is re-queued and finishes once), `test_readiness` (database, storage or OCR down → 503). Browser scripts
+`e2e_register`, `e2e_application`, `e2e_officer`, `e2e_admin`, `e2e_password`, `e2e_ai`, `e2e_security`, `e2e_quality`.
+
+The AI path in the browser uses hand-authored recorded answers (`AI_PROVIDER=fixture`, labelled simulated on the System
+page) because no provider key exists; it shows that grounding, suggestions, officer review, routing, failure handling
+and the data policy work end to end, not how any real model performs.
