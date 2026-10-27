@@ -22,9 +22,14 @@ with sync_playwright() as p:
         response = context.request.get(base+route)
         check('outbox inaccessible '+route, response.status == 404 or 'text/html' in response.headers.get('content-type',''))
         check('no mail content exposed '+route, 'Content-Transfer-Encoding:' not in response.text())
-    page.get_by_role('button', name='Sign out', exact=True).click()
-    for _ in range(5):
-        response = context.request.post(base+'/api/v1/auth/password/forgot', data={'email':'unregistered@example.test'})
+    # Wait for the sign-out to finish: while the session cookie is still attached, a write without the
+    # anti-forgery header is (correctly) refused with 403 and never reaches the rate limiter.
+    with page.expect_response(lambda r: r.url.endswith('/api/v1/auth/logout')):
+        page.get_by_role('button', name='Sign out', exact=True).click()
+    page.wait_for_url(lambda url: '/login' in url or url.rstrip('/') == base)
+    setup = [context.request.post(base+'/api/v1/auth/password/forgot', data={'email':'unregistered@example.test'},
+                                  headers={'X-Requested-With': 'pramaan'}).status for _ in range(5)]
+    check('rate-limit setup requests were accepted or limited, never refused', all(s in (202, 429) for s in setup))
     page.goto(base+'/forgot-password')
     page.get_by_label('Email', exact=False).fill('unregistered@example.test')
     page.get_by_role('button', name='Send reset link', exact=False).click()
