@@ -76,6 +76,10 @@ New files from the stopped run: `Dockerfile`, `.dockerignore`, `backend/scripts/
 | `.env.example` | AI block now lists the Part B variables (the Anthropic adapter it described was removed) | Accurate settings | — |
 | `docs/DEMO_GUIDE.md` | `SHOW_DEMO_ACCOUNTS`, `--reset` warning, routing card, simulated camera, AI status | Matches what runs (seed, benchmark and server checked today) | — |
 | New tests | `test_production_refusals` (19, one per refusal), `test_job_restart`, `test_readiness` (4) | A6; failure and retry table rows that had no test | themselves |
+| `front/e2e/e2e_security.py` | Waits for the logout response before the rate-limit setup and asserts the setup requests were accepted | The final run raced the sign-out (setup refused with 403, as designed) | 3/3 consecutive passes |
+| `backend/scripts/e2e.py`, `front/e2e/walkthrough.py` | A one-repeat benchmark report (isolated database) for the walkthrough's server; the walkthrough asserts the report renders | The benchmark page was only ever seen empty in browser runs | walkthrough pass, `/api/v1/benchmark` 200 |
+| `front/src/lib/features.ts` | Removed the inert `account` alias | Not in the contract | accounts_check 22 of 22, e2e_password 7/7 |
+| New `backend/scripts/integration_matrix.py` | Builds the operation matrix from the contract, the UI call sites, smoke output and browser server logs | The matrix can be regenerated from real runs | produced the final matrix |
 
 The merge also brought Opus's own documented edits to `README.md`, `docs/API_CONTRACT.md`, `ARCHITECTURE.md`,
 `PRAMAAN_COMPLETE_PROJECT.md`, `REQUIREMENTS_MATRIX.md`, `SECURITY.md`, `TEST_PLAN.md`, `backend/eval/benchmark.py`,
@@ -100,8 +104,8 @@ All on 27 October 2026. Head `35f8a19`; the e2e_security re-run is on `df824ab`,
 | CI | GitHub Actions on `integration/e2e` | Not observed — `gh` not installed, repository private |
 
 Earlier the same day: resume baseline (backend 78 OK, smoke 375/0, browser 14/19), re-run of the five red scripts
-(5/5), Part B checkpoint (backend 204 OK, smoke 393/0, browser 19/19). Operation matrix: 55 of 61 operations verified
-(smoke as expected for every caller and a 2xx in a browser run); the other six are listed in the matrix with reasons.
+(5/5), Part B checkpoint (backend 204 OK, smoke 393/0, browser 19/19). Operation matrix: 56 of 61 operations verified
+(smoke as expected for every caller and a 2xx in a browser run); the other five are API-only by design and smoke-verified.
 
 ## Not complete, and why
 

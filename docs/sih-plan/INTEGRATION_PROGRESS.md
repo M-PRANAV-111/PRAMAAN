@@ -1,6 +1,6 @@
-Last action: 2026-10-27 — A1/A2 browser coverage added (e2e_admin 7/7, e2e_password 7/7, e2e_officer 5/5); operation matrix now 55 verified of 61.
-Next action: CameraScanner decision (dev-only row), then TEST_PLAN.md and DEMO_GUIDE.md, a final full re-run of every check, then the final report and pull request.
-Known problems: `07_INTEGRATION.md` not found (Questions 1); Docker not installed (A7); CI results cannot be read here (`gh` missing, repository private) so A8's CI step is unobserved; `updateAccount` and `documentHistory` have no UI (decision needed).
+Last action: 2026-10-27 — final checks recorded (backend 228 OK, smoke 393/0, browser 18/19 then e2e_security fixed and 3/3); every row is Verified or Blocked; final report written; branch pushed.
+Next action: a person with Docker builds the image (A7); a person with GitHub access opens the pull request from INTEGRATION_REPORT.md and reads the CI run (A8); answer Questions 1–2.
+Known problems: Docker not installed here; CI and the pull request need GitHub access (`gh` missing, private repo); no AI provider key, so no live AI call has ever been made; `07_INTEGRATION.md` not found.
 
 # Integration resume status
 
@@ -68,25 +68,26 @@ Claims (to avoid double work):
 | C e2e_admin | Astra | Verified | `PASS e2e_admin.py`, `7/7 checks passed` (extended with decline and the System page) | — |
 | C e2e_password | Astra | Verified | `PASS e2e_password.py`, `7/7 checks passed` (extended with the Account page) | — |
 | C e2e_ai | Opus | Verified | rewritten in `8a8da49`: fixture `25/25`, rate_limit `19/19`, none `16/16` | — |
-| C e2e_security | Opus | Verified | `PASS e2e_security.py`, `9/9 checks passed` | — |
+| C e2e_security | Opus | Verified | Final run failed once (setup requests raced the sign-out, correctly refused with 403); fixed in `df824ab`; then `3/3 browser scripts passed`, 15 PASS each | — |
 | C e2e_quality | Opus | Verified | `PASS e2e_quality.py`, `11/11 checks passed` (tab order fixed in `ea36c6c`) | — |
 | Failure and retry table | shared (claimed by Opus) | Verified | 15 rows in the matrix, each tied to a test that passed today; two tests added (`test_job_restart`, `test_readiness`) | — |
-| Development-only behaviour search | shared | Partial | Searched (mock, fake, dummy, placeholder, lorem, TODO, FIXME, setTimeout). Removed by the stopped run: browser-only registration adapter with a hard-coded password; demo chips now need `meta.features.demo_accounts` (refused in production, tested). Open: CameraScanner synthetic page | Decide the CameraScanner fallback; re-run the search at the end |
-| docs/TEST_PLAN.md | shared | Not started | No integration section yet | Next |
-| docs/DEMO_GUIDE.md | shared | Not started | Unchanged by the integration | Next |
-| Final report | shared | Not started | — | Last |
+| Development-only behaviour search | shared (Opus) | Verified | Searched twice (mock, fake, dummy, placeholder, lorem, TODO, FIXME, setTimeout); every remaining match is legitimate (forbidden-word guard, timing-attack dummy hash, honest note on unverified thresholds, real timers). Removed: browser-only registration adapter (stopped run); scanner's drawn page in production (`0205501`, `test_simulated_camera_is_not_offered`, processing_check 13 of 13) | — |
+| docs/TEST_PLAN.md | shared (Opus) | Verified | Section "Integration — local verification, 27 October 2026" with the final results | — |
+| docs/DEMO_GUIDE.md | shared (Opus) | Verified | Commands run today against a temporary DATA_DIR: seed 14 s, benchmark 26/26 and 2 of 8, `/ready` 200, `/meta` flags as described (`35f8a19`) | — |
+| Final report | shared (Opus) | Verified | [INTEGRATION_REPORT.md](INTEGRATION_REPORT.md): every change to an existing file and why, every check with its result, everything not complete | — |
+| Pull request | shared | Blocked | Branch pushed to `origin/integration/e2e`; `gh` not installed and no token | Open `https://github.com/M-PRANAV-111/PRAMAAN/compare/main...integration/e2e` with the description in INTEGRATION_REPORT.md |
 
 ## Matrix rows
 
 One row per contract operation (61); evidence columns are in
-[INTEGRATION_MATRIX.md](INTEGRATION_MATRIX.md#operation-matrix--latest-run).
+[INTEGRATION_MATRIX.md](INTEGRATION_MATRIX.md#operation-matrix--final-run).
 
 | Item | Owner | State | Evidence | Next step |
 |---|---|---|---|---|
-| 55 operations (list in the matrix) | as tagged | Verified | smoke as expected for every caller + a 2xx in a browser run today | — |
-| `metrics` | Astra | Verified | smoke `401/200(token)`; token-only by design | — |
-| `getAccount` | Astra | Partial | smoke 200; the UI only uses its presence as a navigation gate and reads the profile from `me` | Question 2 |
-| `benchmark` | Astra | Partial | browser runs got the documented 404 on a fresh seed (page explains it, asserted by inventory_check); smoke generated a report and got 200 | Accept as designed |
-| `jobNotes` | Opus | Partial | smoke 200/404; the UI reads the same notes from `JobOut.ai_notes`, so no screen calls this endpoint | Keep API-only |
-| `updateAccount`, `documentHistory` | Astra | Partial | smoke 200; no UI | Question 2 |
-| frontend name `account` | Astra | Partial | not in the contract; guarded by `hasEndpoint`, so inert | Remove the dead alias |
+| 56 operations (list in the matrix) | as tagged | Verified | smoke as expected for every caller + a 2xx in a browser run today (incl. `benchmark`, now with a real report in the walkthrough) | — |
+| `metrics` | Astra | Verified (API only) | smoke `401/200(token)`; token-only by design | — |
+| `getAccount` | Astra | Verified (API only) | smoke 200; the UI reads the profile from `me` and uses this only as a navigation gate | — |
+| `jobNotes` | Opus | Verified (API only) | smoke 200 / foreign 404; the UI reads the same notes from `JobOut.ai_notes` | — |
+| `documentHistory` | Astra | Verified (API only) | smoke 200 / foreign 404; the Documents tab shows versions from the application detail | Question 2 |
+| `updateAccount` | Astra | Verified (API only) | smoke 200; no profile-edit screen (adding one would be a new feature) | Question 2 |
+| frontend name `account` | Astra | Verified | removed (`cc95eeb`); the matrix now reports no frontend names outside the contract | — |

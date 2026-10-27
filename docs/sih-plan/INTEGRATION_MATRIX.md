@@ -110,22 +110,26 @@ e2e_password 7/7 · e2e_quality 11/11 · e2e_register 3/3 · e2e_security 15 PAS
 
 ## Operation matrix — final run
 
-Generated 2026-10-27 from `contracts/openapi.json`, the frontend call sites, the final smoke output and the server logs
-of the final browser runs (with the passing e2e_security re-run in place of the raced one).
+Generated 2026-10-27 with `python backend/scripts/integration_matrix.py` from `contracts/openapi.json`, the frontend
+call sites, the final smoke output and the server logs of the final browser runs, with the later passing runs of
+e2e_security, walkthrough (now with a real benchmark report), accounts_check and e2e_password in place of the earlier
+ones for those scripts.
 
 How it is built: every operation in the contract; the frontend files that name it; the smoke result per caller (`OUT`
 = signed out, then each role, then the invalid-input and foreign-owner probes); and the requests the server logged
 during the browser runs (status: scripts). A row is **Verified** when smoke passed and a browser run reached it with
-a 2xx. "Browser runs" counts requests made by the UI and the scripts' own API reads alike. At the resume baseline the
-counts were Verified 42, Partial (UI not exercised) 13, Partial (no UI) 2, API only 1, over 58 operations.
+a 2xx. **Verified (API only)** means smoke passed and no screen calls it by design: `metrics` (token only),
+`getAccount` (the UI reads the profile from `me`), `jobNotes` (the UI reads the same notes from `JobOut.ai_notes`),
+`documentHistory` (the UI shows versions from the application detail) and `updateAccount` (no profile-edit screen;
+Question 2). At the resume baseline the counts were Verified 42, Partial 15, API only 1, over 58 operations.
 
 | Operation | Method and path | UI call sites | Smoke today (OUT / INST / OFF / ADMIN / AUD / invalid / foreign) | Browser runs today (status: scripts) | State |
 |---|---|---|---|---|---|
-| `getAccount` | `GET /api/v1/account` | components/AppShell.tsx, lib/features.ts | 401 / 200 / 200 / 200 / 200 / n/a / n/a | not hit | Partial (UI not exercised by a browser run) |
+| `getAccount` | `GET /api/v1/account` | components/AppShell.tsx, lib/features.ts | 401 / 200 / 200 / 200 / 200 / n/a / n/a | not hit | Verified (API only) |
 | `listSessions` | `GET /api/v1/account/sessions` | pages/AuthPages.tsx | 401 / 200 / 200 / 200 / 200 / n/a / n/a | 200: e2e_password, e2e_quality | Verified |
 | `revokeOtherSessions` | `POST /api/v1/account/sessions/revoke-others` | pages/AuthPages.tsx | 401 / 200 / 200 / 200 / 200 / n/a / n/a | 200: e2e_password | Verified |
 | `revokeSession` | `DELETE /api/v1/account/sessions/{session_id}` | pages/AuthPages.tsx | 401 / 200 / 200 / 200 / 200 / n/a / 404 | 200: e2e_password | Verified |
-| `updateAccount` | `PATCH /api/v1/account` | not called by UI | 401 / 200 / 200 / 200 / 200 / 422 / n/a | not hit | Partial (no UI) |
+| `updateAccount` | `PATCH /api/v1/account` | not called by UI | 401 / 200 / 200 / 200 / 200 / 422 / n/a | not hit | Verified (API only) |
 | `acceptRegistration` | `POST /api/v1/admin/registrations/{registration_id}/accept` | pages/AdminPages.tsx | 401 / 403 / 403 / 200 / 403 / 422 / n/a | 200: e2e_register | Verified |
 | `deactivateUser` | `POST /api/v1/admin/users/{user_id}/deactivate` | pages/AdminPages.tsx | 401 / 403 / 403 / 200 / 403 / 422 / n/a | 200: e2e_admin | Verified |
 | `declineRegistration` | `POST /api/v1/admin/registrations/{registration_id}/decline` | pages/AdminPages.tsx | 401 / 403 / 403 / 200 / 403 / 422 / n/a | 200: e2e_admin | Verified |
@@ -154,10 +158,10 @@ counts were Verified 42, Partial (UI not exercised) 13, Partial (no UI) 2, API o
 | `register` | `POST /api/v1/auth/register` | lib/features.ts, pages/AuthPages.tsx | 202 / 202 / 202 / 202 / 202 / 422 / n/a | 202: e2e_admin, e2e_register | Verified |
 | `resetPassword` | `POST /api/v1/auth/password/reset` | pages/AuthPages.tsx | 200 / 200 / 200 / 200 / 200 / 422 / n/a | 200: e2e_password | Verified |
 | `verifyEmail` | `POST /api/v1/auth/verify-email` | pages/AuthPages.tsx | 200 / 200 / 200 / 200 / 200 / 422 / n/a | 200: e2e_admin, e2e_register | Verified |
-| `benchmark` | `GET /api/v1/benchmark` | main.tsx, pages/Oversight.tsx | 401 / 403 / 200 / 200 / 200 / n/a / n/a | 404: inventory_check, walkthrough | Partial (UI not exercised by a browser run) |
+| `benchmark` | `GET /api/v1/benchmark` | main.tsx, pages/Oversight.tsx | 401 / 403 / 200 / 200 / 200 / n/a / n/a | 200: walkthrough; 404: inventory_check | Verified |
 | `dashboard` | `GET /api/v1/dashboard` | main.tsx, pages/Queue.tsx | 401 / 200 / 200 / 200 / 200 / n/a / n/a | 200: a11y_check, accounts_check, e2e_admin, e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_officer, e2e_password, e2e_quality, e2e_register, e2e_security, inventory_check, signin_check, tracking_check, walkthrough | Verified |
 | `getJob` | `GET /api/v1/jobs/{job_id}` | components/UploadSlot.tsx, components/processing/useJobProgress.ts | 401 / 200 / 200 / 200 / 200 / n/a / 404 | 200: e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_application, e2e_officer, processing_check, walkthrough | Verified |
-| `jobNotes` | `GET /api/v1/jobs/{job_id}/notes` | not called by UI | 401 / 200 / 200 / 200 / 200 / n/a / 404 | not hit | Partial (no UI) |
+| `jobNotes` | `GET /api/v1/jobs/{job_id}/notes` | not called by UI | 401 / 200 / 200 / 200 / 200 / n/a / 404 | not hit | Verified (API only) |
 | `uploadDocument` | `POST /api/v1/applications/{application_id}/documents` | api/client.ts | 401 / 202 / 403 / 403 / 403 / 422 / 404 | 202: e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_application, processing_check, walkthrough | Verified |
 | `documentEvidence` | `GET /api/v1/documents/{document_id}/evidence` | components/processing/ProcessingJourney.tsx, pages/Workspace.tsx | 401 / 200 / 200 / 200 / 200 / n/a / 404 | 200: a11y_check, e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_application, processing_check, walkthrough | Verified |
 | `listVerifications` | `GET /api/v1/applications/{application_id}/verifications` | components/processing/ProcessingJourney.tsx, main.tsx, pages/Workspace.tsx | 401 / 200 / 200 / 200 / 200 / n/a / 404 | 200: a11y_check, e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit], e2e_application, e2e_officer, inventory_check, processing_check, signin_check, tracking_check, walkthrough | Verified |
@@ -180,9 +184,9 @@ counts were Verified 42, Partial (UI not exercised) 13, Partial (no UI) 2, API o
 | `metrics` | `GET /api/v1/metrics` | not called by UI | 401/200(token) / 401/200(token) / 401/200(token) / 401/200(token) / 401/200(token) / n/a / n/a | not hit | Verified (API only) |
 | `ready` | `GET /api/v1/ready` | components/processing/OutcomeCard.tsx, pages/AdminPages.tsx | 200 / 200 / 200 / 200 / 200 / n/a / n/a | 200: e2e_admin, e2e_ai[fixture], e2e_ai[none], e2e_ai[rate_limit] | Verified |
 | `applicationTimeline` | `GET /api/v1/applications/{application_id}/timeline` | lib/features.ts, pages/Workspace.tsx | 401 / 200 / 200 / 200 / 200 / n/a / 404 | 200: e2e_application, inventory_check, tracking_check, walkthrough | Verified |
-| `documentHistory` | `GET /api/v1/applications/{application_id}/documents/history` | not called by UI | 401 / 200 / 200 / 200 / 200 / n/a / 404 | not hit | Partial (no UI) |
+| `documentHistory` | `GET /api/v1/applications/{application_id}/documents/history` | not called by UI | 401 / 200 / 200 / 200 / 200 / n/a / 404 | not hit | Verified (API only) |
 | `respondToFinding` | `POST /api/v1/findings/{finding_id}/responses` | lib/features.ts, pages/Workspace.tsx | 401 / 200 / 403 / 403 / 403 / 422 / 404 | 200: e2e_officer | Verified |
 
-State counts: Partial (UI not exercised by a browser run): 2, Partial (no UI): 3, Verified: 55, Verified (API only): 1
+State counts: Verified: 56, Verified (API only): 5
 
-Frontend names not in the contract (guarded by hasEndpoint, so they render nothing): `account`
+Frontend names not in the contract (guarded by hasEndpoint, so they render nothing): none
